@@ -1,0 +1,8 @@
+/*.sqlite
+.idea
+.vscode
+.DS_Store
+/dist
+/.local
+/*.pdf
+/.goreleaser.local.yaml

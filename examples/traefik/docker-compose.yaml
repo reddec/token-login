@@ -1,0 +1,37 @@
+services:
+  tokens:
+    image: ghcr.io/reddec/token-login:1
+    restart: unless-stopped
+    labels:
+      - "traefik.http.routers.tokens.rule=PathPrefix(`/tokens/`)"
+
+      # traefik not like Nginx and not stripping prefixes by default
+      - "traefik.http.middlewares.tokens-stripprefix.stripprefix.prefixes=/tokens"
+      - "traefik.http.routers.tokens.middlewares=tokens-stripprefix@docker"
+
+    volumes:
+      - tokens:/data
+
+  backend:
+    image: daime/http-dump:latest
+    restart: unless-stopped
+    labels:
+      - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
+      - "traefik.http.middlewares.tokens-auth.forwardauth.address=http://tokens:8081"
+      # proxy all X- headers from tokens to upstream
+      - "traefik.http.middlewares.tokens-auth.forwardauth.authResponseHeadersRegex=^X-"
+      - "traefik.http.routers.backend.middlewares=tokens-auth@docker"
+
+  proxy:
+    image: traefik:v2.10
+    restart: unless-stopped
+    command: --providers.docker
+    ports:
+      - 8080:80
+    depends_on:
+      - tokens
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+volumes:
+  tokens: {}

@@ -1,0 +1,34 @@
+services:
+  tokens:
+    image: ghcr.io/reddec/token-login:1
+    restart: unless-stopped # it may restart several times due to DB cold start
+    depends_on:
+      - db
+    environment:
+      DB_URL: "postgres://postgres:postgres@db"
+
+  backend:
+    image: daime/http-dump:latest
+    restart: unless-stopped
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    depends_on:
+      - tokens
+      - backend
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+volumes:
+  db: {}

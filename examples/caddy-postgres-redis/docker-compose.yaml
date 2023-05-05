@@ -1,0 +1,46 @@
+services:
+  tokens:
+    image: ghcr.io/reddec/token-login:1
+    restart: unless-stopped # it may restart several times due to DB cold start
+    depends_on:
+      - db
+      - redis
+    environment:
+      DB_URL: "postgres://postgres:postgres@db"
+      LOGIN: oidc
+      OIDC_SESSION: redis
+      OIDC_REDIS_URL: redis://redis
+      # TODO: set values bellow to your own provider
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+      OIDC_ISSUER: ""
+
+  backend:
+    image: daime/http-dump:latest
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    # uncomment the following line and mount /data to volume if you want to keep sessions even after restart.
+    # command: ["redis-server", "--save", "60", "1"]
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - 5432:5432
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    depends_on:
+      - tokens
+      - backend
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+volumes:
+  db: { }

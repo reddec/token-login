@@ -1,0 +1,151 @@
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.User}}'s token {{or .Token.Label .Token.Hint}} headers</title>
+    <link rel="stylesheet" href="{{globals.rootPath}}/static/bulma.min.css"/>
+</head>
+<body>
+
+
+<section class="section">
+    <nav class="navbar">
+        <div class="navbar-menu">
+            <div class="navbar-start">
+                <a class="navbar-item" href="{{globals.rootPath}}">
+                    Home
+                </a>
+            </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <p class="button is-disabled">
+                            <strong>Hello, {{.User}}!</strong>
+                        </p>
+                        <a class="button is-light" href="{{globals.rootPath}}/oauth/logout">
+                            Log out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </nav>
+
+    <div class="container">
+        <h1 class="title">Token :: {{or .Token.Label .Token.Hint}}</h1>
+        <form method="post">
+            <div class="field-body">
+                <div class="field">
+                    <label class="label">Label</label>
+                    <input class="input" type="text" name="label" value="{{.Token.Label}}" placeholder="Label"/>
+                    <p class="help">Human-readable informational field in order to distinguish tokens between each
+                        other.</p>
+                </div>
+                <div class="field">
+                    <label class="label">Path</label>
+                    <input class="input" type="text" name="path" value="{{.Token.Path}}" placeholder="Allowed path"/>
+                    <p class="help">Allowed request path.</p>
+                </div>
+                <div class="field">
+                    <label class="label">&nbsp;</label>
+                    <button class="button is-primary" type="submit">save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+</section>
+<section class="section">
+    <div class="container">
+        <h3 class="title">Headers</h3>
+        <p class="content mb-2">
+            During authentication requests using (ex: forward authentication), it is possible to include custom headers
+            which will be returned along with the authentication response. This feature can be useful for passing
+            additional information between the client and the authentication server. For example, a custom header could
+            include a user's access level or permissions, which can then be used by downstream services to make access
+            control
+            decisions.
+        </p>
+
+        <form method="post" class="mb-2">
+            <div class="field-body">
+                <div class="field">
+                    <label class="label">Header name</label>
+                    <input class="input is-small" type="text" name="name" placeholder="Header name"/>
+                    <p class="help">Header name to be used. It's advisable to use prefix <code>X-</code> for custom
+                        headers</p>
+                </div>
+                <div class="field">
+                    <label class="label">Header value</label>
+                    <input class="input is-small" type="text" name="value" placeholder="Header value"/>
+                    <p class="help">Header value. Don't make it too long</p>
+                </div>
+                <div class="field">
+                    <label class="label">&nbsp;</label>
+                    <button class="button is-primary is-small" name="action" value="headers" type="submit">add header
+                    </button>
+                </div>
+            </div>
+        </form>
+        <div class="table-container">
+            <table class="table is-striped is-fullwidth">
+                <thead>
+                <tr>
+                    <th>Header</th>
+                    <th>Value</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="is-disabled">
+                    <td>X-User</td>
+                    <td>{{.User}}</td>
+                    <td>
+                        <p class="help is-italic">
+                            implicitly added
+                        </p>
+                    </td>
+                </tr>
+                <tr class="is-disabled">
+                    <td>X-Token-Hint</td>
+                    <td>{{.Token.Hint}}</td>
+                    <td>
+                        <p class="help is-italic">
+                            implicitly added
+                        </p>
+                    </td>
+                </tr>
+                </tbody>
+                <tbody>
+                {{range .Token.Headers}}
+                    <tr>
+                        <td>
+                            {{.Name}}
+                        </td>
+                        <td>
+                            {{.Value}}
+                        </td>
+                        <td>
+                            <form method="post">
+                                <input type="hidden" name="name" value="{{.Name}}"/>
+                                <button class="delete" type="submit" name="action" value="headersDelete">delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+
+
+    </div>
+</section>
+</body>
+<style>
+    .table form {
+        margin: 0;
+    }
+</style>
+</html>

@@ -1,0 +1,18 @@
+:8080 {
+    handle_path /tokens/* {
+        reverse_proxy http://tokens:8080
+    }
+
+    handle /* {
+        forward_auth http://tokens:8081 {
+            uri /auth                        # anything
+            header_up X-Forwarded-Uri {uri}  # pass original URI
+            header_up +X-Token               # pass token (optional) to token-login
+            copy_headers X-User X-Token-Hint # copy headers from token-login
+        }
+
+        reverse_proxy http://backend:8080 {
+            header_up -X-Token                   # there is no need for upstream to know exact used token
+        }
+    }
+}
