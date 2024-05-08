@@ -42,6 +42,18 @@ func TestValidator_Valid(t *testing.T) {
 		Key: key2,
 	}))
 
+	key3, err := dbo.NewKey()
+	require.NoError(t, err)
+	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
+		User: "user",
+		Config: dbo.TokenConfig{
+			Label: "demo 2",
+			Path:  "/**",
+			Host:  "example.com",
+		},
+		Key: key3,
+	}))
+
 	t.Logf("KeyID 1: %s\nKeyID 2: %s", key.ID().String(), key2.ID().String())
 
 	t.Run("basic test is ok", func(t *testing.T) {
@@ -79,5 +91,15 @@ func TestValidator_Valid(t *testing.T) {
 		s, err = store.FindToken(ctx, key.ID())
 		require.NoError(t, err)
 		assert.NotEmpty(t, s.Requests)
+	})
+
+	t.Run("valid host is working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "example.com", "/something", key3.String())
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid host is not working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "", "/something", key3.String())
+		require.Error(t, err)
 	})
 }

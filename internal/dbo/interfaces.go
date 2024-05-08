@@ -14,6 +14,7 @@ type TokenRef struct {
 type TokenConfig struct {
 	Label   string
 	Path    string
+	Host    string
 	Headers Headers
 }
 
