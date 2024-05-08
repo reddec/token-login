@@ -87,6 +87,17 @@ To test backend, create token and add it to the request url `?token=<token>` or 
 
     docker compose -f examples/caddy-postgres/docker-compose.yaml up
 
+**Kubernetes Ingress Nginx**
+
+```yaml
+annotations:
+  # put any other headers you want to copy from response
+  nginx.ingress.kubernetes.io/auth-response-headers: x-user
+  nginx.ingress.kubernetes.io/auth-url: http://tokens.tokens.svc.cluster.local
+  nginx.ingress.kubernetes.io/auth-snippet: |
+    proxy_set_header X-Forwarded-Uri $request_uri;
+```
+
 ## Versioning
 
 The Token login follows a classic semantic versioning approach, where the major version indicates forward compatibility
