@@ -208,12 +208,17 @@ For example, with cache TTL 1 minute and limit with up to 4000 items:
 
 ## Authorization
 
-token-login offers two ways to protect the administrator interface (Admin UI):
-Basic Authentication (`--login basic`, which is the default) and OpenID Connect (`--login oidc`).
+token-login offers several ways to protect the administrator interface (Admin UI):
+Basic Authentication (`--login basic`, which is the default), OpenID Connect (`--login oidc`), and
+Proxy (`--login proxy`).
 
 While [Basic Authentication](#basic-auth) provides a simple and easy-to-use solution, we highly recommend using OpenID
-Connect in production environments. [OpenID Connect](#oidc-login) offers more advanced features, such as Single
-Sign-On (SSO), multi-user authentication, and fine-grained access control.
+Connect or Proxy methods in production environments. [OpenID Connect](#oidc-login) offers more advanced features, such
+as Single Sign-On (SSO), multi-user authentication, and fine-grained access control.
+
+The Proxy method operates on the principle of pre-service authorization, employing headers to authenticate users. This
+approach is frequently utilized in scenarios such as Single Sign-On (SSO), OAuth2-proxy, Authentik gateway, or Authelia.
+It ensures that access to services is authenticated before reaching the token-login.
 
 ### Basic auth
 
@@ -292,6 +297,33 @@ OIDC Redis session configuration:
 For example:
 
     token-login --login oidc --oidc.client-id example-client --oidc.client-secret my-secret --oidc.issuer https://my-idp.example.com
+
+### Proxy login
+
+
+Proxy login most commonly used together with [auth sub-request](https://doc.traefik.io/traefik/middlewares/http/forwardauth/)
+
+```
+Proxy login config:
+      --proxy.header=              Header which will contain user name (default: X-User) [$PROXY_HEADER]
+      --proxy.logout=              Logout redirect [$PROXY_LOGOUT]
+```
+
+* `proxy.logout` supports relative paths
+
+For example:
+
+    token-login --login proxy
+
+With custom header (default is `X-User`):
+
+
+    token-login --login proxy --proxy.header X-Web-User
+
+
+With custom logout url:
+
+    token-login --login proxy --proxy.logout https://example.com/logout
 
 ## Architecture
 
@@ -386,9 +418,11 @@ Bruteforce math:
   in $Y = \sqrt{X} = (2^{256})^{0.5} = 2^{128}$
 - let's assume that one hash can be computed per 1 ns (in real life 300-500ns) per one core, which gives us $p = 10^9$
   hashes/second
-- let's assume that we are in the future, total population is 100B ($10^{11}$) people, each person has 10000 ($10^4$) cores
+- let's assume that we are in the future, total population is 100B ($10^{11}$) people, each person has 10000 ($10^4$)
+  cores
   device,
-  whole population will 24/7 trying to brute-force our hash: $P = p \cdot 10^{11} \cdot 10^4 = p \cdot 10^{15} = 10^{24}$ hashes/second.
+  whole population will 24/7 trying to brute-force our hash: $P = p \cdot 10^{11} \cdot 10^4 = p \cdot 10^{15} =
+  10^{24}$ hashes/second.
 - To simplify (and round up): $10^{24} \lt (2^4)^{24} \to 2^{96} = W$ hashes/second
 - Total time in seconds: $\frac{Y}{W} = \frac{2^{128}}{2^{96}} = 2^{32} (seconds) \approx 136 (years)$ (A LOT)
 

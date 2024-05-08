@@ -43,11 +43,12 @@ var (
 )
 
 type Config struct {
-	Admin Server `group:"Admin server configuration" namespace:"admin" env-namespace:"ADMIN"`
-	Auth  Server `group:"Auth server configuration" namespace:"auth" env-namespace:"AUTH"`
-	Login string `long:"login" env:"LOGIN" description:"Login method for admin UI" default:"basic" choice:"basic" choice:"oidc"`
-	OIDC  OIDC   `group:"OIDC login config" namespace:"oidc" env-namespace:"OIDC"`
-	Basic Basic  `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
+	Admin Server    `group:"Admin server configuration" namespace:"admin" env-namespace:"ADMIN"`
+	Auth  Server    `group:"Auth server configuration" namespace:"auth" env-namespace:"AUTH"`
+	Login string    `long:"login" env:"LOGIN" description:"Login method for admin UI" default:"basic" choice:"basic" choice:"oidc" choice:"proxy"`
+	OIDC  OIDC      `group:"OIDC login config" namespace:"oidc" env-namespace:"OIDC"`
+	Basic Basic     `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
+	Proxy ProxyAuth `group:"Proxy login config" namespace:"proxy" env-namespace:"PROXY"`
 	DB    struct {
 		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite?cache=shared"`
 		MaxConn      int           `long:"max-conn" env:"MAX_CONN" description:"Maximum number of opened connections to database" default:"10"`
@@ -142,7 +143,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	wg.Go(func() error {
 		defer cancel()
 		router := chi.NewRouter()
-		router.Get("/health", func(writer http.ResponseWriter, request *http.Request) {
+		router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
 			writer.WriteHeader(http.StatusNoContent)
 		})
 		router.Mount("/", web.AuthHandler(tokenValidator))
@@ -300,7 +301,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 
 	if !ca.AppendCertsFromPEM(caCert) {
 		if srv.IgnoreSystemCA {
-			return fmt.Errorf("CA certs failed to load")
+			return errors.New("CA certs failed to load")
 		}
 		log.Println("failed add custom CA to pool")
 	}
@@ -313,6 +314,8 @@ func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(ha
 		return cfg.Basic.createMiddleware(router)
 	case "oidc":
 		return cfg.OIDC.createMiddleware(ctx, router)
+	case "proxy":
+		return cfg.Proxy.createMiddleware(router)
 	default:
 		panic("unknown login method " + cfg.Login)
 	}
@@ -353,7 +356,7 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 		ClientSecret:   cfg.ClientSecret,
 		ServerURL:      cfg.ServerURL,
 		SessionManager: session,
-		PostAuth: func(writer http.ResponseWriter, req *http.Request, idToken *oidc.IDToken) error {
+		PostAuth: func(_ http.ResponseWriter, _ *http.Request, idToken *oidc.IDToken) error {
 			if len(cfg.Emails) == 0 {
 				return nil
 			}
@@ -379,7 +382,7 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Handler {
 	const flash = "_unauth"
 	// mimic behaviour
-	router.Get("/oauth/logout", func(writer http.ResponseWriter, request *http.Request) {
+	router.Get("/oauth/logout", func(writer http.ResponseWriter, _ *http.Request) {
 		utils.SetFlashPath(writer, flash, "true", "/") // potentially unsafe, but for logout should work fine
 		writer.Header().Set("Location", "../")
 		writer.WriteHeader(http.StatusSeeOther)
@@ -400,6 +403,23 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 				return
 			}
 			handler.ServeHTTP(writer, utils.WithUser(request, user))
+		})
+	}
+}
+
+type ProxyAuth struct {
+	Header string `long:"header" env:"HEADER" description:"Header which will contain user name" default:"X-User"`
+	Logout string `long:"logout" env:"LOGOUT" description:"Logout redirect"`
+}
+
+func (pa *ProxyAuth) createMiddleware(router chi.Router) func(http.Handler) http.Handler {
+	router.Get("/oauth/logout", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Location", pa.Logout)
+		writer.WriteHeader(http.StatusSeeOther)
+	})
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			handler.ServeHTTP(writer, utils.WithUser(request, request.Header.Get(pa.Header)))
 		})
 	}
 }

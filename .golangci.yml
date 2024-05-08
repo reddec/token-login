@@ -16,3 +16,8 @@ linters:
     - funlen
     - gci
     - nonamedreturns
+    - interfacer
+    - maligned
+    - tagalign
+    - depguard
+    - structcheck

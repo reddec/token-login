@@ -8,7 +8,11 @@ else
 	BINSUFFIX:=
 endif
 
-LINTER := $(GOBIN)/golangci-lint$(BINSUFFIX)
+LINTER := $(shell which golangci-lint)
+LINTER ?= $(GOBIN)/golangci-lint$(BINSUFFIX)
+
+
+
 GORELEASER := $(GOBIN)/goreleaser$(BINSUFFIX)
 
 $(LINTER):

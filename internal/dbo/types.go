@@ -64,7 +64,7 @@ func (kid KeyID) String() string {
 func (kid *KeyID) Scan(value any) error {
 	str, ok := value.(string)
 	if !ok {
-		return fmt.Errorf("key ID type should be text")
+		return errors.New("key ID type should be text")
 	}
 
 	data, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(str)

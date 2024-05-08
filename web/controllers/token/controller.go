@@ -56,14 +56,14 @@ func New(store Storage, rootPath string) http.Handler {
 				"rootPath": path.Join(rootPath, ".."),
 			}
 		},
-	}).Parse(source)), func(_ http.ResponseWriter, request *http.Request, state *State) (any, error) {
+	}).Parse(source)), func(_ http.ResponseWriter, _ *http.Request, state *State) (any, error) {
 		return &tokenHeadersContext{
 			State: state,
 		}, nil
 	})
 
 	// update token
-	srv.Action("", func(writer http.ResponseWriter, request *http.Request, state *State) error {
+	srv.Action("", func(_ http.ResponseWriter, request *http.Request, state *State) error {
 		label := strings.TrimSpace(request.FormValue("label"))
 		allowedPath := strings.TrimSpace(request.FormValue("path"))
 		return store.UpdateTokenConfig(request.Context(), state.Ref, dbo.TokenConfig{
@@ -74,7 +74,7 @@ func New(store Storage, rootPath string) http.Handler {
 	})
 
 	// add header
-	srv.Action("headers", func(writer http.ResponseWriter, request *http.Request, state *State) error {
+	srv.Action("headers", func(_ http.ResponseWriter, request *http.Request, state *State) error {
 		name := strings.TrimSpace(request.FormValue("name"))
 		value := strings.TrimSpace(request.FormValue("value"))
 
@@ -86,7 +86,7 @@ func New(store Storage, rootPath string) http.Handler {
 	})
 
 	// remove header
-	srv.Action("headersDelete", func(writer http.ResponseWriter, request *http.Request, state *State) error {
+	srv.Action("headersDelete", func(_ http.ResponseWriter, request *http.Request, state *State) error {
 		name := strings.TrimSpace(request.FormValue("name"))
 
 		return store.UpdateTokenConfig(request.Context(), state.Ref, dbo.TokenConfig{

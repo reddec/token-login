@@ -79,7 +79,7 @@ func New(store Storage, rootPath string) http.Handler {
 	})
 
 	// delete token
-	srv.Action("delete", func(writer http.ResponseWriter, request *http.Request, state *State) error {
+	srv.Action("delete", func(_ http.ResponseWriter, request *http.Request, state *State) error {
 		id, err := strconv.ParseInt(request.FormValue("token"), 10, 64)
 
 		if err != nil {
