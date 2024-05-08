@@ -35,8 +35,8 @@ func (v *Validator) Invalidate(keyID dbo.KeyID) {
 	v.cache.Clear(keyID)
 }
 
-func (v *Validator) Valid(ctx context.Context, path string, token string) (*dbo.Token, error) {
-	t, err := v.validate(ctx, path, token)
+func (v *Validator) Valid(ctx context.Context, host, path string, token string) (*dbo.Token, error) {
+	t, err := v.validate(ctx, host, path, token)
 	if err != nil {
 		return t, err
 	}
@@ -44,7 +44,7 @@ func (v *Validator) Valid(ctx context.Context, path string, token string) (*dbo.
 	return t, nil
 }
 
-func (v *Validator) validate(ctx context.Context, path string, token string) (*dbo.Token, error) {
+func (v *Validator) validate(ctx context.Context, host, path string, token string) (*dbo.Token, error) {
 	// parse token
 	key, err := dbo.ParseToken(token)
 	if err != nil {
@@ -56,7 +56,7 @@ func (v *Validator) validate(ctx context.Context, path string, token string) (*d
 		return nil, fmt.Errorf("get token: %w", err)
 	}
 
-	if !dbToken.Valid(path, key.Payload()) {
+	if !dbToken.Valid(host, path, key.Payload()) {
 		return nil, ErrInvalidToken
 	}
 	return dbToken, nil

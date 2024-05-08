@@ -33,6 +33,7 @@ type Token struct {
 	User         string    `db:"user"`
 	Label        string    `db:"label"`
 	Path         string    `db:"path"`
+	Host         string    `db:"host"`
 	Headers      Headers   `db:"headers"`
 	Requests     int64     `db:"requests"`
 	LastAccessAt time.Time `db:"last_access_at"`
@@ -43,7 +44,10 @@ func (t *Token) Hint() string {
 	return t.KeyID.String()[:HintChars]
 }
 
-func (t *Token) Valid(path string, payload []byte) bool {
+func (t *Token) Valid(host, path string, payload []byte) bool {
+	if t.Host != "" && host != t.Host {
+		return false // host miss match
+	}
 	pat, err := t.glob.Get(func() (glob.Glob, error) {
 		if t.Path == "" {
 			return glob.Compile("/**", '/')
