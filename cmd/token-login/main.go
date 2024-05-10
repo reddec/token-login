@@ -158,7 +158,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
 	})
-
+	log.Println("Ready. Version:", version)
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
