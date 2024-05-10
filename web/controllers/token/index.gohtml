@@ -45,7 +45,12 @@
                 <div class="field">
                     <label class="label">Path</label>
                     <input class="input" type="text" name="path" value="{{.Token.Path}}" placeholder="Allowed path"/>
-                    <p class="help">Allowed request path.</p>
+                    <p class="help">Allowed request path. Supports glob</p>
+                </div>
+                <div class="field">
+                    <label class="label">Host</label>
+                    <input class="input" type="text" name="host" value="{{.Token.Host}}" placeholder="Allowed host"/>
+                    <p class="help">Allowed request host. Supports glob</p>
                 </div>
                 <div class="field">
                     <label class="label">&nbsp;</label>

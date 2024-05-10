@@ -52,10 +52,10 @@ func (st *Store) ListTokens(ctx context.Context, user string) ([]*dbo.Token, err
 
 func (st *Store) CreateToken(ctx context.Context, params dbo.TokenParams) error {
 	const q = `
-INSERT INTO token (key_id, hash, "user", label, path, headers)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO token (key_id, hash, "user", label, host, path, headers)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
-	_, err := st.db.ExecContext(ctx, q, params.Key.ID(), params.Key.Hash(), params.User, params.Config.Label, params.Config.Path, params.Config.Headers)
+	_, err := st.db.ExecContext(ctx, q, params.Key.ID(), params.Key.Hash(), params.User, params.Config.Label, params.Config.Host, params.Config.Path, params.Config.Headers)
 	return err
 }
 
@@ -83,8 +83,8 @@ func (st *Store) UpdateTokenKey(ctx context.Context, ref dbo.TokenRef, key dbo.K
 
 func (st *Store) UpdateTokenConfig(ctx context.Context, ref dbo.TokenRef, config dbo.TokenConfig) error {
 	_, err := st.db.ExecContext(ctx,
-		`UPDATE token SET label = $1, path = $2, headers = $3 WHERE id = $4 AND "user" = $5`,
-		config.Label, config.Path, config.Headers, ref.ID, ref.User)
+		`UPDATE token SET label = $1, path = $2, headers = $3, host = $4 WHERE id = $5 AND "user" = $6`,
+		config.Label, config.Path, config.Headers, config.Host, ref.ID, ref.User)
 	return err
 }
 

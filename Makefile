@@ -8,12 +8,17 @@ else
 	BINSUFFIX:=
 endif
 
+ifeq ($(shell which golangci-lint),)
+LINTER := $(GOBIN)/golangci-lint$(BINSUFFIX)
+else
 LINTER := $(shell which golangci-lint)
-LINTER ?= $(GOBIN)/golangci-lint$(BINSUFFIX)
+endif
 
-
-
+ifeq ($(shell which goreleaser),)
 GORELEASER := $(GOBIN)/goreleaser$(BINSUFFIX)
+else
+GORELEASER := $(shell which goreleaser)
+endif
 
 $(LINTER):
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2

@@ -19,7 +19,8 @@ devices, from Raspberry Pi to Xeon multi-core cloud servers.
 All components of Token-login are designed to work in a cloud-native environment, allowing users to utilize it as a
 standalone application, as part of container deployment (e.g., docker-compose), or as part of a Kubernetes cluster.
 
-![recording](https://user-images.githubusercontent.com/6597086/235964098-e0ef3972-0b11-4863-86cc-94e7fea5eea2.gif)
+
+![Screenshot from 2024-05-10 22-18-05](https://github.com/reddec/token-login/assets/6597086/51b46cd3-8c98-4545-8ed5-fda9762cc5de)
 
 ## Installation
 

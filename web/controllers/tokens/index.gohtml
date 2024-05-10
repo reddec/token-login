@@ -52,6 +52,13 @@
                     </p>
                 </div>
                 <div class="field">
+                    <label class="label">Host</label>
+                    <input class="input" type="text" name="host" value="" placeholder="Allowed host"/>
+                    <p class="help">Allowed request host. Supports <a href="https://github.com/gobwas/glob"
+                                                                      target="_blank">glob</a>
+                    </p>
+                </div>
+                <div class="field">
                     <label class="label">&nbsp;</label>
                     <button type="submit" class="button is-primary">create token</button>
                 </div>
@@ -99,6 +106,7 @@
                     <tr>
                         <th>Label</th>
                         <th title="Non-hashed part of the token">Hint</th>
+                        <th>Host</th>
                         <th>Path</th>
                         <th>Usage</th>
                         <th>Last access</th>
@@ -117,6 +125,7 @@
                                     <code>{{.Hint}}</code>
                                 </a>
                             </td>
+                            <td>{{.Host}}</td>
                             <td>{{.Path}}</td>
                             <td>{{.Requests}}</td>
                             <td>

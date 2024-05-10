@@ -42,26 +42,50 @@ func TestValidator_Valid(t *testing.T) {
 		Key: key2,
 	}))
 
+	key3, err := dbo.NewKey()
+	require.NoError(t, err)
+	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
+		User: "user",
+		Config: dbo.TokenConfig{
+			Label: "demo 3",
+			Path:  "/**",
+			Host:  "example.com",
+		},
+		Key: key3,
+	}))
+
+	key4, err := dbo.NewKey()
+	require.NoError(t, err)
+	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
+		User: "user",
+		Config: dbo.TokenConfig{
+			Label: "demo 4",
+			Path:  "/**",
+			Host:  "*.example.com",
+		},
+		Key: key4,
+	}))
+
 	t.Logf("KeyID 1: %s\nKeyID 2: %s", key.ID().String(), key2.ID().String())
 
 	t.Run("basic test is ok", func(t *testing.T) {
-		found, err := v.Valid(ctx, "/", key.String())
+		found, err := v.Valid(ctx, "", "/", key.String())
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), found.ID)
 
-		found2, err := v.Valid(ctx, "/hello", key2.String())
+		found2, err := v.Valid(ctx, "", "/hello", key2.String())
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), found2.ID)
 	})
 
 	t.Run("path validation for glob", func(t *testing.T) {
-		found, err := v.Valid(ctx, "/something", key.String())
+		found, err := v.Valid(ctx, "", "/something", key.String())
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), found.ID)
 	})
 
 	t.Run("path validation restricted", func(t *testing.T) {
-		_, err := v.Valid(ctx, "/something", key2.String())
+		_, err := v.Valid(ctx, "", "/something", key2.String())
 		require.Error(t, err)
 	})
 
@@ -70,7 +94,7 @@ func TestValidator_Valid(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, s.Requests)
 
-		_, err = v.Valid(ctx, "/something", key.String())
+		_, err = v.Valid(ctx, "", "/something", key.String())
 		require.NoError(t, err)
 
 		err = v.UpdateStats(ctx)
@@ -79,5 +103,30 @@ func TestValidator_Valid(t *testing.T) {
 		s, err = store.FindToken(ctx, key.ID())
 		require.NoError(t, err)
 		assert.NotEmpty(t, s.Requests)
+	})
+
+	t.Run("valid host is working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "example.com", "/something", key3.String())
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid host is not working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "", "/something", key3.String())
+		require.Error(t, err)
+	})
+
+	t.Run("valid wildcard host is working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "some.example.com", "/something", key4.String())
+		require.NoError(t, err)
+	})
+
+	t.Run("multi-level wildcard host is not working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "another.some.example.com", "/something", key4.String())
+		require.Error(t, err)
+	})
+
+	t.Run("wildcard does not support root level", func(t *testing.T) {
+		_, err := v.Valid(ctx, "example.com", "/something", key4.String())
+		require.Error(t, err)
 	})
 }

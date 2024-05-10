@@ -10,6 +10,7 @@ import (
 const (
 	URLHeader           = `X-Forwarded-Uri`
 	TokenHeader         = `X-Token`
+	HostHeader          = "X-Forwarded-Host"
 	TokenQuery          = `token`
 	AuthUserHeader      = `X-User`
 	AuthTokenHintHeader = `X-Token-Hint` //nolint:gosec
@@ -23,7 +24,8 @@ func AuthHandler(validator *validator.Validator) http.Handler {
 			return
 		}
 		key := getToken(request, requestURL)
-		token, err := validator.Valid(request.Context(), requestURL.Path, key)
+		host := getHost(request)
+		token, err := validator.Valid(request.Context(), host, requestURL.Path, key)
 		if err != nil {
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
@@ -46,4 +48,11 @@ func getToken(req *http.Request, sourceURL *url.URL) string {
 		return apiKey
 	}
 	return ""
+}
+
+func getHost(req *http.Request) string {
+	if host := req.Header.Get(HostHeader); host != "" {
+		return host
+	}
+	return req.Host
 }
