@@ -37,7 +37,8 @@ type Token struct {
 	Headers      Headers   `db:"headers"`
 	Requests     int64     `db:"requests"`
 	LastAccessAt time.Time `db:"last_access_at"`
-	glob         utils.Cached[glob.Glob]
+	pathGlob     utils.Cached[glob.Glob]
+	hostGlob     utils.Cached[glob.Glob]
 }
 
 func (t *Token) Hint() string {
@@ -45,10 +46,17 @@ func (t *Token) Hint() string {
 }
 
 func (t *Token) Valid(host, path string, payload []byte) bool {
-	if t.Host != "" && host != t.Host {
-		return false // host miss match
+	hostPat, err := t.hostGlob.Get(func() (glob.Glob, error) {
+		if t.Host == "" {
+			return glob.Compile("**", '.')
+		}
+		return glob.Compile(t.Host, '.')
+	})
+	if err != nil || !hostPat.Match(host) {
+		return false
 	}
-	pat, err := t.glob.Get(func() (glob.Glob, error) {
+
+	pat, err := t.pathGlob.Get(func() (glob.Glob, error) {
 		if t.Path == "" {
 			return glob.Compile("/**", '/')
 		}

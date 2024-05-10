@@ -47,11 +47,23 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
 		User: "user",
 		Config: dbo.TokenConfig{
-			Label: "demo 2",
+			Label: "demo 3",
 			Path:  "/**",
 			Host:  "example.com",
 		},
 		Key: key3,
+	}))
+
+	key4, err := dbo.NewKey()
+	require.NoError(t, err)
+	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
+		User: "user",
+		Config: dbo.TokenConfig{
+			Label: "demo 4",
+			Path:  "/**",
+			Host:  "*.example.com",
+		},
+		Key: key4,
 	}))
 
 	t.Logf("KeyID 1: %s\nKeyID 2: %s", key.ID().String(), key2.ID().String())
@@ -100,6 +112,21 @@ func TestValidator_Valid(t *testing.T) {
 
 	t.Run("invalid host is not working", func(t *testing.T) {
 		_, err := v.Valid(ctx, "", "/something", key3.String())
+		require.Error(t, err)
+	})
+
+	t.Run("valid wildcard host is working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "some.example.com", "/something", key4.String())
+		require.NoError(t, err)
+	})
+
+	t.Run("multi-level wildcard host is not working", func(t *testing.T) {
+		_, err := v.Valid(ctx, "another.some.example.com", "/something", key4.String())
+		require.Error(t, err)
+	})
+
+	t.Run("wildcard does not support root level", func(t *testing.T) {
+		_, err := v.Valid(ctx, "example.com", "/something", key4.String())
 		require.Error(t, err)
 	})
 }
