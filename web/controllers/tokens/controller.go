@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/web/controllers/utils"
@@ -67,7 +68,8 @@ func New(store Storage, rootPath string) http.Handler {
 			User: state.User,
 			Config: dbo.TokenConfig{
 				Label: request.FormValue("label"),
-				Path:  request.FormValue("path"),
+				Path:  strings.TrimSpace(request.FormValue("path")),
+				Host:  strings.TrimSpace(request.FormValue("host")),
 			},
 			Key: key,
 		}); err != nil {

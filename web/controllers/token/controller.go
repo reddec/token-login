@@ -66,9 +66,11 @@ func New(store Storage, rootPath string) http.Handler {
 	srv.Action("", func(_ http.ResponseWriter, request *http.Request, state *State) error {
 		label := strings.TrimSpace(request.FormValue("label"))
 		allowedPath := strings.TrimSpace(request.FormValue("path"))
+		host := strings.TrimSpace(request.FormValue("host"))
 		return store.UpdateTokenConfig(request.Context(), state.Ref, dbo.TokenConfig{
 			Label:   label,
 			Path:    allowedPath,
+			Host:    host,
 			Headers: state.Token.Headers,
 		})
 	})
