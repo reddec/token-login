@@ -3,6 +3,6 @@
 .vscode
 .DS_Store
 /dist
-/.local
+.local
 /*.pdf
 /.goreleaser.local.yaml
