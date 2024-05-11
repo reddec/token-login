@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/reddec/token-login/internal/types"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/reddec/token-login/internal/dbo"
@@ -21,12 +23,12 @@ var source string
 
 type State struct {
 	User  string
-	Token *dbo.Token
+	Token *types.Token
 	Ref   dbo.TokenRef
 }
 
 type Storage interface {
-	GetToken(ctx context.Context, ref dbo.TokenRef) (*dbo.Token, error)
+	GetToken(ctx context.Context, ref dbo.TokenRef) (*types.Token, error)
 	UpdateTokenConfig(ctx context.Context, ref dbo.TokenRef, config dbo.TokenConfig) error
 }
 
@@ -37,7 +39,7 @@ func New(store Storage, rootPath string) http.Handler {
 			return nil, fmt.Errorf("parse ID: %w", err)
 		}
 		user := utils.GetUser(request)
-		ref := dbo.TokenRef{User: user, ID: id}
+		ref := dbo.TokenRef{User: user, ID: int(id)}
 		token, err := store.GetToken(request.Context(), ref)
 		if err != nil {
 			return nil, fmt.Errorf("find token: %w", err)

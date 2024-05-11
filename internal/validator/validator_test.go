@@ -5,22 +5,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/reddec/token-login/internal/types"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/reddec/token-login/internal/dbo"
-	"github.com/reddec/token-login/internal/dbo/sqllite"
 	"github.com/reddec/token-login/internal/validator"
 )
 
 func TestValidator_Valid(t *testing.T) {
 	ctx := context.Background()
-	store, err := sqllite.New("file::memory:?cache=shared", nil)
+	store, err := dbo.New(ctx, "file::memory:?cache=shared", nil)
 	require.NoError(t, err)
 
 	v := validator.NewValidator(store, 10, 1*time.Minute)
 
-	key, err := dbo.NewKey()
+	key, err := types.NewKey()
 	require.NoError(t, err)
 	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
 		User: "admin",
@@ -31,7 +32,7 @@ func TestValidator_Valid(t *testing.T) {
 		Key: key,
 	}))
 
-	key2, err := dbo.NewKey()
+	key2, err := types.NewKey()
 	require.NoError(t, err)
 	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
 		User: "user",
@@ -42,7 +43,7 @@ func TestValidator_Valid(t *testing.T) {
 		Key: key2,
 	}))
 
-	key3, err := dbo.NewKey()
+	key3, err := types.NewKey()
 	require.NoError(t, err)
 	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
 		User: "user",
@@ -54,7 +55,7 @@ func TestValidator_Valid(t *testing.T) {
 		Key: key3,
 	}))
 
-	key4, err := dbo.NewKey()
+	key4, err := types.NewKey()
 	require.NoError(t, err)
 	require.NoError(t, store.CreateToken(ctx, dbo.TokenParams{
 		User: "user",
@@ -71,17 +72,17 @@ func TestValidator_Valid(t *testing.T) {
 	t.Run("basic test is ok", func(t *testing.T) {
 		found, err := v.Valid(ctx, "", "/", key.String())
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), found.ID)
+		assert.Equal(t, 1, found.ID)
 
 		found2, err := v.Valid(ctx, "", "/hello", key2.String())
 		require.NoError(t, err)
-		assert.Equal(t, int64(2), found2.ID)
+		assert.Equal(t, 2, found2.ID)
 	})
 
 	t.Run("path validation for glob", func(t *testing.T) {
 		found, err := v.Valid(ctx, "", "/something", key.String())
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), found.ID)
+		assert.Equal(t, 1, found.ID)
 	})
 
 	t.Run("path validation restricted", func(t *testing.T) {

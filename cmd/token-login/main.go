@@ -5,15 +5,17 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
+
+	"github.com/reddec/token-login/internal/dbo"
 
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
@@ -22,13 +24,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
-	"github.com/jmoiron/sqlx"
 	oidclogin "github.com/reddec/oidc-login"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/reddec/token-login/internal/dbo"
-	"github.com/reddec/token-login/internal/dbo/pg"
-	"github.com/reddec/token-login/internal/dbo/sqllite"
 	"github.com/reddec/token-login/internal/validator"
 	"github.com/reddec/token-login/web"
 	"github.com/reddec/token-login/web/controllers/utils"
@@ -50,7 +48,7 @@ type Config struct {
 	Basic Basic     `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
 	Proxy ProxyAuth `group:"Proxy login config" namespace:"proxy" env-namespace:"PROXY"`
 	DB    struct {
-		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite?cache=shared"`
+		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)"`
 		MaxConn      int           `long:"max-conn" env:"MAX_CONN" description:"Maximum number of opened connections to database" default:"10"`
 		IdleConn     int           `long:"idle-conn" env:"IDLE_CONN" description:"Maximum number of idle connections to database" default:"1"`
 		IdleTimeout  time.Duration `long:"idle-timeout" env:"IDLE_TIMEOUT" description:"Maximum amount of time a connection may be idle" default:"0"`
@@ -123,7 +121,7 @@ func main() {
 
 func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	// setup db
-	store, err := config.getStore()
+	store, err := dbo.New(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}
@@ -180,29 +178,11 @@ func workerDumpStats(ctx context.Context, config Config, validator *validator.Va
 	}
 }
 
-func (cfg Config) getStore() (dbo.Storage, error) { //nolint:ireturn
-	u, err := url.Parse(cfg.DB.URL)
-	if err != nil {
-		return nil, fmt.Errorf("parse DSN: %w", err)
-	}
-
-	switch u.Scheme {
-	case "sqlite":
-		return sqllite.New(cfg.DB.URL[len(u.Scheme)+3:], cfg.configurator())
-	case "postgres":
-		return pg.New(cfg.DB.URL, cfg.configurator())
-	default:
-		return nil, fmt.Errorf("unknown dialect %s", u.Scheme)
-	}
-}
-
-func (cfg Config) configurator() func(db *sqlx.DB) {
-	return func(db *sqlx.DB) {
-		db.SetMaxIdleConns(cfg.DB.IdleConn)
-		db.SetMaxOpenConns(cfg.DB.MaxConn)
-		db.SetConnMaxIdleTime(cfg.DB.IdleTimeout)
-		db.SetConnMaxLifetime(cfg.DB.ConnLifeTime)
-	}
+func (cfg Config) configureDatabase(db *sql.DB) {
+	db.SetMaxIdleConns(cfg.DB.IdleConn)
+	db.SetMaxOpenConns(cfg.DB.MaxConn)
+	db.SetConnMaxIdleTime(cfg.DB.IdleTimeout)
+	db.SetConnMaxLifetime(cfg.DB.ConnLifeTime)
 }
 
 func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name string, handler http.Handler) error {
