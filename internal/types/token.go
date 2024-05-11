@@ -1,10 +1,9 @@
-package dbo
+package types
 
 import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base32"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -16,16 +15,15 @@ import (
 	"github.com/reddec/token-login/internal/utils"
 )
 
-var ErrKeySize = errors.New("key size invalid")
-
 const (
-	keyIDSize   = 8                       // public part
 	keyDataSize = 32                      // private part
-	HintChars   = (keyIDSize * 6 / 4) - 1 //nolint:gomnd
+	KeyIDSize   = 8                       // public part
+	HintChars   = (KeyIDSize * 6 / 4) - 1 //nolint:gomnd
+	TokenSize   = KeyIDSize + keyDataSize
 )
 
 type Token struct {
-	ID           int64     `db:"id"`
+	ID           int       `db:"id"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
 	KeyID        KeyID     `db:"key_id"`
@@ -69,6 +67,7 @@ func (t *Token) Valid(host, path string, payload []byte) bool {
 	hash := sha3.Sum384(payload)
 	return subtle.ConstantTimeCompare(hash[:], t.Hash) == 1
 }
+
 func NewKey() (Key, error) {
 	var key Key
 	if _, err := io.ReadFull(rand.Reader, key[:]); err != nil {
@@ -82,23 +81,23 @@ func ParseToken(value string) (key Key, err error) {
 	if err != nil {
 		return key, fmt.Errorf("parse: %w", err)
 	}
-	if len(data) != keyIDSize+keyDataSize {
+	if len(data) != TokenSize {
 		return key, ErrKeySize
 	}
 	copy(key[:], data)
 	return
 }
 
-type Key [keyIDSize + keyDataSize]byte
+type Key [TokenSize]byte
 
 func (rt Key) ID() KeyID {
 	var kid KeyID
-	copy(kid[:], rt[:keyIDSize])
+	copy(kid[:], rt[:KeyIDSize])
 	return kid
 }
 
 func (rt Key) Payload() []byte {
-	return rt[keyIDSize:]
+	return rt[KeyIDSize:]
 }
 
 func (rt Key) String() string {

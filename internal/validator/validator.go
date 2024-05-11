@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/reddec/token-login/internal/types"
+
 	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/utils"
 )
@@ -13,7 +15,7 @@ import (
 var ErrInvalidToken = errors.New("invalid token")
 
 type Storage interface {
-	FindToken(ctx context.Context, id dbo.KeyID) (*dbo.Token, error)
+	FindToken(ctx context.Context, id types.KeyID) (*types.Token, error)
 	UpdateTokensStats(ctx context.Context, stats []dbo.TokenStat) error
 }
 
@@ -31,22 +33,22 @@ func NewValidator(storage Storage, cacheCapacity int, cacheTTL time.Duration) *V
 	return v
 }
 
-func (v *Validator) Invalidate(keyID dbo.KeyID) {
+func (v *Validator) Invalidate(keyID types.KeyID) {
 	v.cache.Clear(keyID)
 }
 
-func (v *Validator) Valid(ctx context.Context, host, path string, token string) (*dbo.Token, error) {
+func (v *Validator) Valid(ctx context.Context, host, path string, token string) (*types.Token, error) {
 	t, err := v.validate(ctx, host, path, token)
 	if err != nil {
 		return t, err
 	}
-	v.stats.Inc(t.ID)
+	v.stats.Inc(int64(t.ID))
 	return t, nil
 }
 
-func (v *Validator) validate(ctx context.Context, host, path string, token string) (*dbo.Token, error) {
+func (v *Validator) validate(ctx context.Context, host, path string, token string) (*types.Token, error) {
 	// parse token
-	key, err := dbo.ParseToken(token)
+	key, err := types.ParseToken(token)
 	if err != nil {
 		return nil, fmt.Errorf("parse key: %w", err)
 	}
@@ -71,7 +73,7 @@ func (v *Validator) UpdateStats(ctx context.Context) error {
 	var storeStats = make([]dbo.TokenStat, 0, len(stats))
 	for _, s := range stats {
 		storeStats = append(storeStats, dbo.TokenStat{
-			Token: s.ID,
+			Token: int(s.ID),
 			Last:  time.Unix(0, s.Last),
 			Hits:  s.Requests,
 		})

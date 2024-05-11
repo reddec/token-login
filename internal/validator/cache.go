@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/reddec/token-login/internal/types"
 
-	"github.com/reddec/token-login/internal/dbo"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type cacheItem struct {
-	Token   *dbo.Token
+	Token   *types.Token
 	Created time.Time
 	Lock    sync.RWMutex
 }
@@ -22,7 +22,7 @@ func (ci *cacheItem) expired(ttl time.Duration) bool {
 }
 
 func newCachedStorage(store Storage, ttl time.Duration, cacheSize int) *cachedStorage {
-	data, err := lru.New[dbo.KeyID, *cacheItem](cacheSize)
+	data, err := lru.New[types.KeyID, *cacheItem](cacheSize)
 	if err != nil {
 		panic(err) // negative cache capacity
 	}
@@ -36,14 +36,14 @@ func newCachedStorage(store Storage, ttl time.Duration, cacheSize int) *cachedSt
 type cachedStorage struct {
 	store Storage
 	ttl   time.Duration
-	cache *lru.Cache[dbo.KeyID, *cacheItem]
+	cache *lru.Cache[types.KeyID, *cacheItem]
 }
 
-func (c *cachedStorage) Clear(id dbo.KeyID) {
+func (c *cachedStorage) Clear(id types.KeyID) {
 	c.cache.Remove(id)
 }
 
-func (c *cachedStorage) Get(ctx context.Context, id dbo.KeyID) (*dbo.Token, error) {
+func (c *cachedStorage) Get(ctx context.Context, id types.KeyID) (*types.Token, error) {
 	v, ok := c.cache.Get(id)
 	if ok {
 		v.Lock.RLock()

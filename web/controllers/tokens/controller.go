@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/reddec/token-login/internal/types"
+
 	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/web/controllers/utils"
 )
@@ -21,10 +23,10 @@ const (
 var source string
 
 type Storage interface {
-	ListTokens(ctx context.Context, user string) ([]*dbo.Token, error)
+	ListTokens(ctx context.Context, user string) ([]*types.Token, error)
 	CreateToken(ctx context.Context, params dbo.TokenParams) error
 	DeleteToken(ctx context.Context, ref dbo.TokenRef) error
-	UpdateTokenKey(ctx context.Context, ref dbo.TokenRef, key dbo.Key) error
+	UpdateTokenKey(ctx context.Context, ref dbo.TokenRef, key types.Key) error
 }
 
 func New(store Storage, rootPath string) http.Handler {
@@ -58,7 +60,7 @@ func New(store Storage, rootPath string) http.Handler {
 
 	// create token
 	srv.Action("", func(writer http.ResponseWriter, request *http.Request, state *State) error {
-		key, err := dbo.NewKey()
+		key, err := types.NewKey()
 
 		if err != nil {
 			return fmt.Errorf("generate key: %w", err)
@@ -88,7 +90,7 @@ func New(store Storage, rootPath string) http.Handler {
 			return fmt.Errorf("parse ID: %w", err)
 		}
 
-		if err := store.DeleteToken(request.Context(), dbo.TokenRef{User: state.User, ID: id}); err != nil {
+		if err := store.DeleteToken(request.Context(), dbo.TokenRef{User: state.User, ID: int(id)}); err != nil {
 			return fmt.Errorf("delete token: %w", err)
 		}
 
@@ -103,12 +105,12 @@ func New(store Storage, rootPath string) http.Handler {
 			return fmt.Errorf("parse ID: %w", err)
 		}
 
-		key, err := dbo.NewKey()
+		key, err := types.NewKey()
 		if err != nil {
 			return fmt.Errorf("generate key: %w", err)
 		}
 
-		if err := store.UpdateTokenKey(request.Context(), dbo.TokenRef{User: state.User, ID: id}, key); err != nil {
+		if err := store.UpdateTokenKey(request.Context(), dbo.TokenRef{User: state.User, ID: int(id)}, key); err != nil {
 			return fmt.Errorf("get token: %w", err)
 		}
 
@@ -125,25 +127,25 @@ type State struct {
 
 type viewContext struct {
 	Token  string
-	Tokens []*dbo.Token
+	Tokens []*types.Token
 	*State
 }
 
 func (vc *viewContext) Hint() string {
-	if len(vc.Token) >= dbo.HintChars {
-		return vc.Token[:dbo.HintChars]
+	if len(vc.Token) >= types.HintChars {
+		return vc.Token[:types.HintChars]
 	}
 	return ""
 }
 
 func (vc *viewContext) Payload() string {
-	if len(vc.Token) < dbo.HintChars {
+	if len(vc.Token) < types.HintChars {
 		return vc.Token
 	}
-	return vc.Token[dbo.HintChars:]
+	return vc.Token[types.HintChars:]
 }
 
-func (vc *viewContext) CreatedToken() *dbo.Token {
+func (vc *viewContext) CreatedToken() *types.Token {
 	h := vc.Hint()
 	for _, v := range vc.Tokens {
 		if v.Hint() == h {

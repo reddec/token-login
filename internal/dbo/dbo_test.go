@@ -2,21 +2,21 @@ package dbo_test
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
+
+	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/reddec/token-login/internal/dbo"
-	"github.com/reddec/token-login/internal/dbo/pg"
-	"github.com/reddec/token-login/internal/dbo/sqllite"
 )
 
 func TestInterface_pg(t *testing.T) {
 	ctx := context.Background()
-	store, err := pg.New("postgres://postgres:postgres@localhost", nil)
+	store, err := dbo.New(ctx, "postgres://postgres:postgres@localhost", nil)
 	require.NoError(t, err)
 
 	defer store.Close()
@@ -26,7 +26,7 @@ func TestInterface_pg(t *testing.T) {
 
 func TestInterface_sqlite(t *testing.T) {
 	ctx := context.Background()
-	store, err := sqllite.New("file::memory:?cache=shared", nil)
+	store, err := dbo.New(ctx, "file::memory:?cache=shared", nil)
 	require.NoError(t, err)
 
 	defer store.Close()
@@ -35,11 +35,11 @@ func TestInterface_sqlite(t *testing.T) {
 }
 
 func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
-	key1, err := dbo.NewKey()
+	key1, err := types.NewKey()
 	require.NoError(t, err)
-	key2, err := dbo.NewKey()
+	key2, err := types.NewKey()
 	require.NoError(t, err)
-	key3, err := dbo.NewKey()
+	key3, err := types.NewKey()
 	require.NoError(t, err)
 
 	adminTokenParams := dbo.TokenParams{
@@ -47,7 +47,7 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 		Config: dbo.TokenConfig{
 			Label: "admin token",
 			Path:  "/**",
-			Headers: dbo.Headers{
+			Headers: types.Headers{
 				{Name: "X-Group", Value: "sysadmin"},
 			},
 		},
@@ -59,7 +59,7 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 		Config: dbo.TokenConfig{
 			Label: "admin token 2",
 			Path:  "/2",
-			Headers: dbo.Headers{
+			Headers: types.Headers{
 				{Name: "X-Group", Value: "sysadmin-2"},
 			},
 		},
@@ -71,7 +71,7 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 		Config: dbo.TokenConfig{
 			Label: "guest token",
 			Path:  "/guest",
-			Headers: dbo.Headers{
+			Headers: types.Headers{
 				{Name: "X-Group", Value: "guest"},
 			},
 		},
@@ -117,7 +117,7 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 		s, err := store.FindToken(ctx, guestTokenParams.Key.ID())
 		require.NoError(t, err)
 
-		keyNG, err := dbo.NewKey()
+		keyNG, err := types.NewKey()
 		require.NoError(t, err)
 
 		err = store.UpdateTokenKey(ctx, dbo.TokenRef{
@@ -176,7 +176,7 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 	})
 
 	t.Run("delete token", func(t *testing.T) {
-		key, err := dbo.NewKey()
+		key, err := types.NewKey()
 		require.NoError(t, err)
 
 		err = store.CreateToken(ctx, dbo.TokenParams{
@@ -196,11 +196,11 @@ func testStore(ctx context.Context, t *testing.T, store dbo.Storage) {
 
 		_, err = store.FindToken(ctx, key.ID())
 		require.Error(t, err, "token should NOT be found")
-		assert.ErrorIs(t, err, sql.ErrNoRows)
+		assert.True(t, ent.IsNotFound(err))
 	})
 }
 
-func assertParams(t *testing.T, token *dbo.Token, params dbo.TokenParams) {
+func assertParams(t *testing.T, token *types.Token, params dbo.TokenParams) {
 	assert.Equal(t, params.Key.ID(), token.KeyID)
 	assert.Equal(t, params.User, token.User)
 	assert.Equal(t, params.Config.Label, token.Label)
