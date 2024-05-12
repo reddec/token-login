@@ -13,7 +13,6 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gomodule/redigo v1.9.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/ogen-go/ogen v1.1.0
@@ -39,6 +38,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
