@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -24,13 +23,14 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/cache"
 	"github.com/reddec/token-login/internal/ent"
 	"github.com/reddec/token-login/internal/plumbing"
 	"github.com/reddec/token-login/internal/server"
 	"github.com/reddec/token-login/internal/utils"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/reddec/token-login/web"
 )
@@ -191,7 +191,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
 	})
-	log.Println("Ready. Version:", version)
+	slog.Info("ready", "version", version)
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
@@ -223,10 +223,10 @@ func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name stri
 		defer cancel()
 		var err error
 		if srv.TLS {
-			log.Println(name, "- starting TLS server on", srv.Bind)
+			slog.Info("starting TLS server", "bind", srv.Bind, "name", name)
 			err = httpServer.ListenAndServeTLS(srv.Cert, srv.Key)
 		} else {
-			log.Println(name, "- starting plain HTTP server on", srv.Bind)
+			slog.Info("starting plain server", "bind", srv.Bind, "name", name)
 			err = httpServer.ListenAndServe()
 		}
 		if errors.Is(err, http.ErrServerClosed) {
@@ -237,7 +237,7 @@ func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name stri
 
 	wg.Go(func() error {
 		<-ctx.Done()
-		log.Println(name, "- stopping")
+		slog.Info("stopping server", "name", name)
 		tctx, tcancel := context.WithTimeout(context.Background(), srv.Graceful)
 		defer tcancel()
 		return httpServer.Shutdown(tctx)
@@ -294,7 +294,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 			// no system, no custom
 			return fmt.Errorf("read CA: %w", err)
 		}
-		log.Println("failed read custom CA:", err)
+		slog.Warn("failed read custom CA", "error", err)
 		return nil
 	}
 
@@ -302,7 +302,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 		if srv.IgnoreSystemCA {
 			return errors.New("CA certs failed to load")
 		}
-		log.Println("failed add custom CA to pool")
+		slog.Warn("failed add custom CA to pool")
 	}
 	return nil
 }
