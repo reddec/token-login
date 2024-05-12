@@ -1,0 +1,7 @@
+generator:
+  convenient_errors: off
+  features:
+    disable_all: true
+    enable:
+      - paths/server
+      - paths/client

@@ -10,12 +10,12 @@ import (
 
 type userCtx struct{}
 
-func WithUser(req *http.Request, user string) *http.Request {
-	return req.WithContext(context.WithValue(req.Context(), userCtx{}, user))
+func WithUser(ctx context.Context, user string) context.Context {
+	return context.WithValue(ctx, userCtx{}, user)
 }
 
-func GetUser(req *http.Request) string {
-	v, ok := req.Context().Value(userCtx{}).(string)
+func GetUser(ctx context.Context) string {
+	v, ok := ctx.Value(userCtx{}).(string)
 	if ok {
 		return v
 	}

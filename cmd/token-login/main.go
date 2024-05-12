@@ -9,13 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
-
-	"github.com/reddec/token-login/internal/dbo"
 
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
@@ -25,11 +24,15 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
+	"github.com/reddec/token-login/api"
+	"github.com/reddec/token-login/internal/cache"
+	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/plumbing"
+	"github.com/reddec/token-login/internal/server"
+	"github.com/reddec/token-login/internal/utils"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/reddec/token-login/internal/validator"
 	"github.com/reddec/token-login/web"
-	"github.com/reddec/token-login/web/controllers/utils"
 )
 
 //nolint:gochecknoglobals
@@ -55,11 +58,12 @@ type Config struct {
 		ConnLifeTime time.Duration `long:"conn-life-time" env:"CONN_LIFE_TIME" description:"Maximum amount of time a connection may be reused" default:"0"`
 	} `group:"Database configuration" namespace:"db" env-namespace:"DB"`
 	Cache struct {
-		Limit int           `long:"limit" env:"LIMIT" description:"Maximum number of tokens in cache" default:"1024"`
-		TTL   time.Duration `long:"ttl" env:"TTL" description:"Maximum live time of token in cache" default:"15s"`
+		TTL time.Duration `long:"ttl" env:"TTL" description:"Maximum live time of token in cache. Also forceful reload time" default:"15s"`
 	} `group:"Cache configuration" namespace:"cache" env-namespace:"CACHE"`
-
-	StatsInterval time.Duration `long:"stats-interval" env:"STATS_INTERVAL" description:"Interval of statistics synchronization" default:"1s"`
+	Stats struct {
+		Buffer   int           `long:"buffer" env:"BUFFER" description:"Buffer size for hits" default:"2048"`
+		Interval time.Duration `long:"interval" env:"INTERVAL" description:"Statistics interval" default:"5s"`
+	} `group:"Stats configuration" namespace:"stats" env-namespace:"STATS"`
 }
 
 //nolint:maligned
@@ -121,22 +125,48 @@ func main() {
 
 func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	// setup db
-	store, err := dbo.New(ctx, config.DB.URL, config.configureDatabase)
+	store, err := ent.New(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}
 	defer store.Close()
 
+	hitsCache := make(chan web.Hit, config.Stats.Buffer)
+	keysCache := cache.New(store)
+
+	if err := keysCache.SyncKeys(ctx); err != nil {
+		// initial sync
+		return fmt.Errorf("sync keys: %w", err)
+	}
+	srv := server.New(store)
+	apiServer, err := api.NewServer(srv)
+	if err != nil {
+		return fmt.Errorf("create api server: %w", err)
+	}
+	srv.OnRemove(keysCache.Drop)
+	srv.OnUpdate(func(id int) {
+		if err := keysCache.SyncKey(ctx, id); err != nil {
+			slog.Error("sync key failed", "id", id, "err", err)
+		}
+	})
+
 	// setup runners
 	var wg multierror.Group
 
-	// setup validation
-	tokenValidator := validator.NewValidator(store, config.Cache.Limit, config.Cache.TTL)
+	// setup db->cache key sync
 	wg.Go(func() error {
-		log.Println("starting stats dump every", config.StatsInterval)
-		workerDumpStats(ctx, config, tokenValidator)
+		defer cancel()
+		keysCache.PollKeys(ctx, config.Cache.TTL)
 		return nil
 	})
+
+	// setup stats->db sync
+	wg.Go(func() error {
+		defer cancel()
+		plumbing.SyncStats(ctx, store, hitsCache, config.Stats.Interval)
+		return nil
+	})
+
 	// setup auth server
 	wg.Go(func() error {
 		defer cancel()
@@ -144,14 +174,19 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
 			writer.WriteHeader(http.StatusNoContent)
 		})
-		router.Mount("/", web.AuthHandler(tokenValidator))
+		router.Mount("/", web.AuthHandler(keysCache, hitsCache))
 		return config.Auth.Run(ctx, cancel, "auth server", router)
 	})
+
 	// setup Admin server
 	router := chi.NewRouter()
 	router.Use(withOWASPHeaders)
 	authMW := config.authMiddleware(ctx, router)
-	router.With(authMW).Mount("/", web.NewAdmin(store))
+
+	router.With(authMW).Route("/", func(r chi.Router) {
+		r.Handle(api.Prefix, http.StripPrefix(api.Prefix+"/", apiServer))
+		// TODO: static server
+	})
 	wg.Go(func() error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
@@ -160,22 +195,6 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
-}
-
-func workerDumpStats(ctx context.Context, config Config, validator *validator.Validator) {
-	t := time.NewTicker(config.StatsInterval)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-		if err := validator.UpdateStats(ctx); err != nil {
-			log.Println("failed update stats:", err)
-		}
-	}
 }
 
 func (cfg Config) configureDatabase(db *sql.DB) {
@@ -354,7 +373,8 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 	return func(handler http.Handler) http.Handler {
 		return login.SecureFunc(func(writer http.ResponseWriter, request *http.Request) {
 			token := oidclogin.Token(request)
-			handler.ServeHTTP(writer, utils.WithUser(request, oidclogin.User(token)))
+			request = request.WithContext(utils.WithUser(request.Context(), oidclogin.User(token)))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }
@@ -382,7 +402,8 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 				http.Error(writer, "Authorization required", http.StatusUnauthorized)
 				return
 			}
-			handler.ServeHTTP(writer, utils.WithUser(request, user))
+			request = request.WithContext(utils.WithUser(request.Context(), user))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }
@@ -399,7 +420,8 @@ func (pa *ProxyAuth) createMiddleware(router chi.Router) func(http.Handler) http
 	})
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			handler.ServeHTTP(writer, utils.WithUser(request, request.Header.Get(pa.Header)))
+			request = request.WithContext(utils.WithUser(request.Context(), request.Header.Get(pa.Header)))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }

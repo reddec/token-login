@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: Token-Login
+  description: Token Login API
+  version: 1.0.0
+servers:
+  - url: "/api/v1"
+paths:
+  /tokens:
+    get:
+      operationId: listTokens
+      description: List all tokens for user
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Token"
+
+    post:
+      operationId: createToken
+      description: Create new token for user
+      requestBody:
+        description: Token parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Config"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+
+
+  /tokens/{token}:
+    parameters:
+      - in: path
+        name: token
+        description: Token ID
+        schema:
+          type: integer
+        required: true
+
+    get:
+      operationId: getToken
+      description: Get tokens by ID and for the current user
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+
+    post:
+      operationId: refreshToken
+      description: Regenerate token key
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+
+    patch:
+      operationId: updateToken
+      description: Update token for user. Supports partial update.
+      requestBody:
+        description: Token parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Config"
+      responses:
+        204:
+          description: OK
+
+    delete:
+      operationId: deleteToken
+      description: Delete token for user
+      responses:
+        204:
+          description: OK
+
+components:
+  schemas:
+    NameValue:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+      required:
+        - name
+        - value
+
+    Credential:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Token ID
+        key:
+          type: string
+          description: Raw token key
+      required:
+        - id
+        - key
+
+    Config:
+      type: object
+      properties:
+        label:
+          type: string
+          description: Custom token description
+        host:
+          type: string
+          description: Allowed hosts. Supports globs. Empty means "allow all"
+          example: "*.example.com"
+        path:
+          type: string
+          description: Allowed path. Supports globs. Empty means "allow all"
+          example: "/**"
+        headers:
+          type: array
+          items:
+            $ref: "#/components/schemas/NameValue"
+          description: Custom headers which will be added after successfull authorization
+
+    Token:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique token ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Time when token was initially created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Time when token was updated last time
+        lastAccessAt:
+          type: string
+          format: date-time
+          description: Tentative time when token was last time used
+        keyID:
+          type: string
+          description: Unique first several bytes for token which is used for fast identification
+        user:
+          type: string
+          description: User which created token
+        label:
+          type: string
+          description: Custom token description
+        host:
+          type: string
+          description: Allowed hosts. Supports globs. Empty means "allow all"
+          example: "*.example.com"
+        path:
+          type: string
+          description: Allowed path. Supports globs. Empty means "allow all"
+          example: "/**"
+        headers:
+          type: array
+          items:
+            $ref: "#/components/schemas/NameValue"
+          description: Custom headers which will be added after successfull authorization
+        requests:
+          type: integer
+          format: int64
+          description: Tentative number of requests used this token
+      required:
+        - id
+        - createdAt
+        - updatedAt
+        - keyID
+        - user
+        - label
+        - host
+        - path
+        - requests
