@@ -19,6 +19,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/gomodule/redigo/redis"
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
@@ -64,6 +65,7 @@ type Config struct {
 		Buffer   int           `long:"buffer" env:"BUFFER" description:"Buffer size for hits" default:"2048"`
 		Interval time.Duration `long:"interval" env:"INTERVAL" description:"Statistics interval" default:"5s"`
 	} `group:"Stats configuration" namespace:"stats" env-namespace:"STATS"`
+	Debug bool `long:"debug" env:"DEBUG" description:"Enable debug mode: CORS allowed, debug logging enabled"`
 }
 
 //nolint:maligned
@@ -124,6 +126,8 @@ func main() {
 }
 
 func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
+	config.setupLogging()
+
 	// setup db
 	store, err := ent.New(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
@@ -180,7 +184,11 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 
 	// setup Admin server
 	router := chi.NewRouter()
-	router.Use(withOWASPHeaders)
+	if config.Debug {
+		router.Use(cors.AllowAll().Handler)
+	} else {
+		router.Use(withOWASPHeaders)
+	}
 	authMW := config.authMiddleware(ctx, router)
 
 	router.With(authMW).Route("/", func(r chi.Router) {
@@ -191,7 +199,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
 	})
-	slog.Info("ready", "version", version)
+	slog.Info("ready", "version", version, "debug", config.Debug)
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
@@ -318,6 +326,18 @@ func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(ha
 	default:
 		panic("unknown login method " + cfg.Login)
 	}
+}
+
+func (cfg Config) setupLogging() {
+	if !cfg.Debug {
+		return
+	}
+	lvl := new(slog.LevelVar)
+	lvl.Set(slog.LevelDebug)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: lvl,
+	}))
+	slog.SetDefault(logger)
 }
 
 func (cfg *OIDC) emailsFilter() map[string]bool {
