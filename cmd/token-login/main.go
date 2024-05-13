@@ -65,7 +65,10 @@ type Config struct {
 		Buffer   int           `long:"buffer" env:"BUFFER" description:"Buffer size for hits" default:"2048"`
 		Interval time.Duration `long:"interval" env:"INTERVAL" description:"Statistics interval" default:"5s"`
 	} `group:"Stats configuration" namespace:"stats" env-namespace:"STATS"`
-	Debug bool `long:"debug" env:"DEBUG" description:"Enable debug mode: CORS allowed, debug logging enabled"`
+	Debug struct {
+		Enable      bool   `long:"enable" env:"ENABLE" description:"Enable debug mode"`
+		Impersonate string `long:"impersonate" env:"IMPERSONATE" description:"Disable normal auth and use static user name"`
+	} `group:"Debug" namespace:"debug" env-namespace:"DEBUG"`
 }
 
 //nolint:maligned
@@ -184,7 +187,16 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 
 	// setup Admin server
 	router := chi.NewRouter()
-	if config.Debug {
+	if config.Debug.Enable {
+		router.Use(func(handler http.Handler) http.Handler {
+			// enable logging
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				started := time.Now()
+				handler.ServeHTTP(w, r)
+				dur := time.Since(started)
+				slog.Debug("http request complete", "method", r.Method, "path", r.URL.Path, "duration", dur)
+			})
+		})
 		router.Use(cors.AllowAll().Handler)
 	} else {
 		router.Use(withOWASPHeaders)
@@ -192,9 +204,10 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	authMW := config.authMiddleware(ctx, router)
 
 	router.With(authMW).Route("/", func(r chi.Router) {
-		r.Handle(api.Prefix, http.StripPrefix(api.Prefix+"/", apiServer))
-		// TODO: static server
+		r.Mount(api.Prefix+"/", http.StripPrefix(api.Prefix, apiServer))
+		r.Mount("/", http.FileServerFS(web.Assets()))
 	})
+
 	wg.Go(func() error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
@@ -316,6 +329,10 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 }
 
 func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(handler http.Handler) http.Handler {
+	if cfg.Debug.Impersonate != "" {
+		slog.Warn("Authorization disabled", "user", cfg.Debug.Impersonate)
+		return (&NoAuth{User: cfg.Debug.Impersonate}).createMiddleware(router)
+	}
 	switch cfg.Login {
 	case "basic":
 		return cfg.Basic.createMiddleware(router)
@@ -329,7 +346,7 @@ func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(ha
 }
 
 func (cfg Config) setupLogging() {
-	if !cfg.Debug {
+	if !cfg.Debug.Enable {
 		return
 	}
 	lvl := new(slog.LevelVar)
@@ -441,6 +458,23 @@ func (pa *ProxyAuth) createMiddleware(router chi.Router) func(http.Handler) http
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			request = request.WithContext(utils.WithUser(request.Context(), request.Header.Get(pa.Header)))
+			handler.ServeHTTP(writer, request)
+		})
+	}
+}
+
+type NoAuth struct {
+	User string
+}
+
+func (na *NoAuth) createMiddleware(router chi.Router) func(http.Handler) http.Handler {
+	router.Get("/oauth/logout", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Location", "")
+		writer.WriteHeader(http.StatusSeeOther)
+	})
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			request = request.WithContext(utils.WithUser(request.Context(), na.User))
 			handler.ServeHTTP(writer, request)
 		})
 	}

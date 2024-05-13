@@ -39,6 +39,9 @@ type AccessKey struct {
 }
 
 func (t *AccessKey) Valid(host, path string, payload []byte) bool {
+	if path == "" {
+		path = "/"
+	}
 	if !t.hostGlob.Match(host) {
 		return false
 	}

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
+
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/ent"
 	"github.com/reddec/token-login/internal/ent/token"
@@ -96,7 +98,7 @@ func (srv *Server) GetToken(ctx context.Context, params api.GetTokenParams) (*ap
 }
 
 func (srv *Server) ListTokens(ctx context.Context) ([]api.Token, error) {
-	list, err := srv.client.Token.Query().Where(token.User(utils.GetUser(ctx))).Order(token.ByID()).All(ctx)
+	list, err := srv.client.Token.Query().Where(token.User(utils.GetUser(ctx))).Order(token.ByID(sql.OrderDesc())).All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tokens: %w", err)
 	}

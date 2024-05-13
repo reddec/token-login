@@ -30,7 +30,7 @@ lint: $(LINTER)
 	$(LINTER) run
 .PHONY: lint
 
-snapshot: $(GORELEASER)
+snapshot: $(GORELEASER) web/admin-ui/dist
 	$(GORELEASER) release --snapshot --clean
 	docker tag ghcr.io/reddec/$(notdir $(CURDIR)):$$(jq -r .version dist/metadata.json)-amd64 ghcr.io/reddec/$(notdir $(CURDIR)):1
 
@@ -39,5 +39,8 @@ local: $(GORELEASER)
 
 test:
 	go test -v ./...
+
+web/admin-ui/dist:
+	cd web/admin-ui && npm run build
 
 .PHONY: test

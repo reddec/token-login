@@ -1,0 +1,29 @@
+{
+  "name": "svelte-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5050",
+    "build": "vite build",
+    "preview": "vite preview --port 5050",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "gen": "openapi --input ../../openapi.yaml --output src/api"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "@tsconfig/svelte": "^5.0.2",
+    "openapi-typescript-codegen": "^0.29.0",
+    "svelte": "^4.2.3",
+    "svelte-check": "^3.6.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vite-tsconfig-paths": "^4.3.2"
+  },
+  "dependencies": {
+    "bulma": "^1.0.0",
+    "svelte-spa-router": "^4.0.0",
+    "unique-names-generator": "^4.7.1"
+  }
+}

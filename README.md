@@ -449,3 +449,30 @@ changes in the token store and local cache. It's important to note that when usi
 TTL, there is a risk that a refreshed or removed token may still be available in cache and used for
 authorization. It's important to maintain an appropriate balance between performance and security when tuning these
 configurations.
+
+# Contributing
+
+Requirements:
+
+- go (see version in go.mod)
+- make
+- node + npm LTS (UI only)
+- docker
+
+For debugging
+
+```
+go run ./cmd/token-login/main.go --debug.enable --debug.impersonate admin
+```
+
+For tests
+
+```
+make test
+```
+
+For local snapshot
+
+```
+make snapshot
+```
