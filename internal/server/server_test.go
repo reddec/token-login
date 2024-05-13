@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/ent"
 	"github.com/reddec/token-login/internal/server"
 	"github.com/reddec/token-login/internal/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -64,9 +65,9 @@ func TestNew(t *testing.T) {
 		aliceTokens, err := srv.ListTokens(aliceCtx)
 		require.NoError(t, err)
 		require.Len(t, aliceTokens, 2)
-		require.Equal(t, "l1", aliceTokens[0].Label)
-		require.Equal(t, "l2", aliceTokens[1].Label)
-		assert.Equal(t, "*.example.com", aliceTokens[0].Host)
+		require.Equal(t, "l1", aliceTokens[1].Label)
+		require.Equal(t, "l2", aliceTokens[0].Label)
+		assert.Equal(t, "*.example.com", aliceTokens[1].Host)
 		assert.Equal(t, "/**", aliceTokens[0].Path)
 		require.Len(t, aliceTokens[0].Headers, 2)
 		assert.Equal(t, "foo", aliceTokens[0].Headers[0].Name)
