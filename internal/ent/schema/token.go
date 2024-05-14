@@ -4,10 +4,12 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+
 	"github.com/reddec/token-login/internal/types"
 )
 
@@ -19,6 +21,9 @@ type Token struct {
 // Fields of the Token.
 func (Token) Fields() []ent.Field {
 	return []ent.Field{
+		field.Int("id").SchemaType(map[string]string{
+			dialect.Postgres: "bigserial", // Override Postgres.
+		}),
 		field.Time("created_at").Default(time.Now),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 		field.String("key_id").GoType(&types.KeyID{}).ValueScanner(field.TextValueScanner[*types.KeyID]{}).Unique(),
@@ -26,7 +31,7 @@ func (Token) Fields() []ent.Field {
 		field.String("user"),
 		field.String("label").Default(""),
 		field.String("path").Default("/**"),
-		field.String("host"),
+		field.String("host").Default(""),
 		field.JSON("headers", types.Headers{}).Optional(),
 		field.Int64("requests").Default(0),
 		field.Time("last_access_at").Default(time.Now),
@@ -40,8 +45,8 @@ func (Token) Edges() []ent.Edge {
 
 func (Token) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("user").StorageKey("user_idx_ent"),
-		index.Fields("key_id").StorageKey("key_id_ent").Unique(),
+		index.Fields("user").StorageKey("token_user"),
+		index.Fields("key_id").StorageKey("token_key_id").Unique(),
 	}
 }
 

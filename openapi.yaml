@@ -98,8 +98,10 @@ components:
       properties:
         name:
           type: string
+          maxLength: 50
         value:
           type: string
+          maxLength: 1024
       required:
         - name
         - value
@@ -123,16 +125,20 @@ components:
         label:
           type: string
           description: Custom token description
+          maxLength: 127
         host:
           type: string
           description: Allowed hosts. Supports globs. Empty means "allow all"
           example: "*.example.com"
+          maxLength: 255
         path:
           type: string
           description: Allowed path. Supports globs. Empty means "allow all"
           example: "/**"
+          maxLength: 2048
         headers:
           type: array
+          maxItems: 20
           items:
             $ref: "#/components/schemas/NameValue"
           description: Custom headers which will be added after successfull authorization

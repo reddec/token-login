@@ -18,36 +18,40 @@ func init() {
 	tokenFields := schema.Token{}.Fields()
 	_ = tokenFields
 	// tokenDescCreatedAt is the schema descriptor for created_at field.
-	tokenDescCreatedAt := tokenFields[0].Descriptor()
+	tokenDescCreatedAt := tokenFields[1].Descriptor()
 	// token.DefaultCreatedAt holds the default value on creation for the created_at field.
 	token.DefaultCreatedAt = tokenDescCreatedAt.Default.(func() time.Time)
 	// tokenDescUpdatedAt is the schema descriptor for updated_at field.
-	tokenDescUpdatedAt := tokenFields[1].Descriptor()
+	tokenDescUpdatedAt := tokenFields[2].Descriptor()
 	// token.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	token.DefaultUpdatedAt = tokenDescUpdatedAt.Default.(func() time.Time)
 	// token.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	token.UpdateDefaultUpdatedAt = tokenDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// tokenDescKeyID is the schema descriptor for key_id field.
-	tokenDescKeyID := tokenFields[2].Descriptor()
+	tokenDescKeyID := tokenFields[3].Descriptor()
 	token.ValueScanner.KeyID = tokenDescKeyID.ValueScanner.(field.TypeValueScanner[*types.KeyID])
 	// tokenDescHash is the schema descriptor for hash field.
-	tokenDescHash := tokenFields[3].Descriptor()
+	tokenDescHash := tokenFields[4].Descriptor()
 	// token.HashValidator is a validator for the "hash" field. It is called by the builders before save.
 	token.HashValidator = tokenDescHash.Validators[0].(func([]byte) error)
 	// tokenDescLabel is the schema descriptor for label field.
-	tokenDescLabel := tokenFields[5].Descriptor()
+	tokenDescLabel := tokenFields[6].Descriptor()
 	// token.DefaultLabel holds the default value on creation for the label field.
 	token.DefaultLabel = tokenDescLabel.Default.(string)
 	// tokenDescPath is the schema descriptor for path field.
-	tokenDescPath := tokenFields[6].Descriptor()
+	tokenDescPath := tokenFields[7].Descriptor()
 	// token.DefaultPath holds the default value on creation for the path field.
 	token.DefaultPath = tokenDescPath.Default.(string)
+	// tokenDescHost is the schema descriptor for host field.
+	tokenDescHost := tokenFields[8].Descriptor()
+	// token.DefaultHost holds the default value on creation for the host field.
+	token.DefaultHost = tokenDescHost.Default.(string)
 	// tokenDescRequests is the schema descriptor for requests field.
-	tokenDescRequests := tokenFields[9].Descriptor()
+	tokenDescRequests := tokenFields[10].Descriptor()
 	// token.DefaultRequests holds the default value on creation for the requests field.
 	token.DefaultRequests = tokenDescRequests.Default.(int64)
 	// tokenDescLastAccessAt is the schema descriptor for last_access_at field.
-	tokenDescLastAccessAt := tokenFields[10].Descriptor()
+	tokenDescLastAccessAt := tokenFields[11].Descriptor()
 	// token.DefaultLastAccessAt holds the default value on creation for the last_access_at field.
 	token.DefaultLastAccessAt = tokenDescLastAccessAt.Default.(func() time.Time)
 }

@@ -6,3 +6,4 @@
 .local
 /*.pdf
 /.goreleaser.local.yaml
+/test-data

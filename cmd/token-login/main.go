@@ -16,13 +16,9 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/redisstore"
-	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/gomodule/redigo/redis"
-	"github.com/hashicorp/go-multierror"
-	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
 	"golang.org/x/crypto/bcrypt"
 
@@ -212,7 +208,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
 	})
-	slog.Info("ready", "version", version, "debug", config.Debug)
+	slog.Info("ready", "version", version, "debug", config.Debug.Enable)
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
