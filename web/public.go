@@ -3,32 +3,17 @@ package web
 import (
 	"embed"
 	"io/fs"
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
-
-	"github.com/reddec/token-login/web/controllers/token"
-	"github.com/reddec/token-login/web/controllers/tokens"
+	"log/slog"
 )
 
-//go:embed assets/static
-var static embed.FS
+//go:embed admin-ui/dist
+var dist embed.FS
 
-type Storage interface {
-	token.Storage
-	tokens.Storage
-}
-
-func NewAdmin(storage Storage) http.Handler {
-	mux := chi.NewMux()
-
-	staticDir, err := fs.Sub(static, "assets")
+func Assets() fs.FS {
+	sub, err := fs.Sub(dist, "admin-ui/dist")
 	if err != nil {
-		panic(err)
+		slog.Error("failed load UI - did you compile it?", "error", err)
+		return dist
 	}
-
-	mux.Mount("/", tokens.New(storage, "."))
-	mux.Mount("/token/", token.New(storage, "../"))
-	mux.Mount("/static/", http.FileServer(http.FS(staticDir)))
-	return mux
+	return sub
 }

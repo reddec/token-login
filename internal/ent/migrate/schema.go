@@ -11,7 +11,7 @@ import (
 var (
 	// TokenColumns holds the columns for the "token" table.
 	TokenColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeInt, Increment: true, SchemaType: map[string]string{"postgres": "bigserial"}},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "key_id", Type: field.TypeString, Unique: true},
@@ -19,7 +19,7 @@ var (
 		{Name: "user", Type: field.TypeString},
 		{Name: "label", Type: field.TypeString, Default: ""},
 		{Name: "path", Type: field.TypeString, Default: "/**"},
-		{Name: "host", Type: field.TypeString},
+		{Name: "host", Type: field.TypeString, Default: ""},
 		{Name: "headers", Type: field.TypeJSON, Nullable: true},
 		{Name: "requests", Type: field.TypeInt64, Default: 0},
 		{Name: "last_access_at", Type: field.TypeTime},
@@ -31,12 +31,12 @@ var (
 		PrimaryKey: []*schema.Column{TokenColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "user_idx_ent",
+				Name:    "token_user",
 				Unique:  false,
 				Columns: []*schema.Column{TokenColumns[5]},
 			},
 			{
-				Name:    "key_id_ent",
+				Name:    "token_key_id",
 				Unique:  true,
 				Columns: []*schema.Column{TokenColumns[3]},
 			},

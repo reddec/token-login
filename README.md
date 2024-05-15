@@ -19,8 +19,15 @@ devices, from Raspberry Pi to Xeon multi-core cloud servers.
 All components of Token-login are designed to work in a cloud-native environment, allowing users to utilize it as a
 standalone application, as part of container deployment (e.g., docker-compose), or as part of a Kubernetes cluster.
 
+Since 1.2.0 token-login offers a comprehensive secure [API](openapi.yaml) with full parity to UI.
 
-![Screenshot from 2024-05-10 22-18-05](https://github.com/reddec/token-login/assets/6597086/51b46cd3-8c98-4545-8ed5-fda9762cc5de)
+**main page**
+
+![main](https://github.com/reddec/token-login/assets/6597086/4d73e838-f135-4c47-9ed2-39c06e572341)
+
+**details**
+
+![details](https://github.com/reddec/token-login/assets/6597086/d8b06c71-23b1-4684-a034-1ad72c27d1a3)
 
 ## Installation
 
@@ -99,6 +106,8 @@ annotations:
     proxy_set_header X-Forwarded-Uri $request_uri;
 ```
 
+**Kustomization** - [example here](./examples/kustomize)
+
 ## Versioning
 
 The Token login follows a classic semantic versioning approach, where the major version indicates forward compatibility
@@ -125,18 +134,100 @@ For production use, it's strongly recommended to configure at least the [authori
 
 All configuration parameters can be set via command line arguments and/or environment variables.
 
+```
+Usage:
+  token-login [OPTIONS]
+
+Forward-auth server for tokens
+token-login dev, commit none, built at unknown by unknown
+Author: Aleksandr Baryshnikov <owner@reddec.net>
+
+Application Options:
+      --login=[basic|oidc|proxy]   Login method for admin UI (default: basic) [$LOGIN]
+
+Admin server configuration:
+      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
+      --admin.tls                  Enable TLS [$ADMIN_TLS]
+      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
+      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
+      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
+      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
+      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
+      --admin.read-header-timeout= How long to read header from the request (default: 3s) [$ADMIN_READ_HEADER_TIMEOUT]
+      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
+
+Auth server configuration:
+      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
+      --auth.tls                   Enable TLS [$AUTH_TLS]
+      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
+      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
+      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
+      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
+      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
+      --auth.read-header-timeout=  How long to read header from the request (default: 3s) [$AUTH_READ_HEADER_TIMEOUT]
+      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+
+OIDC login config:
+      --oidc.client-id=            Client ID [$OIDC_CLIENT_ID]
+      --oidc.client-secret=        Client secret [$OIDC_CLIENT_SECRET]
+      --oidc.issuer=               OIDC issuer URL [$OIDC_ISSUER]
+      --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
+      --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
+      --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+
+OIDC Redis session configuration:
+      --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
+      --oidc.redis.keep-alive=     Keep-alive interval (default: 30s) [$OIDC_REDIS_KEEP_ALIVE]
+      --oidc.redis.timeout=        Read/Write/Connect timeout (default: 5s) [$OIDC_REDIS_TIMEOUT]
+      --oidc.redis.max-conn=       Maximum number of active connections (default: 10) [$OIDC_REDIS_MAX_CONN]
+      --oidc.redis.max-idle=       Maximum number of idle connections (default: 1) [$OIDC_REDIS_MAX_IDLE]
+      --oidc.redis.idle-timeout=   Close connections after remaining idle for this duration (default: 30s) [$OIDC_REDIS_IDLE_TIMEOUT]
+
+Basic login config:
+      --basic.realm=               Realm name (default: token-login) [$BASIC_REALM]
+      --basic.user=                User name (default: admin) [$BASIC_USER]
+      --basic.password=            User password hash from bcrypt (default: $2y$05$d1BT6ay8qzViEGUjo4UDkOatWkFlszDfyzaXxCkM84kVhEJLtkXcu) [$BASIC_PASSWORD]
+
+Proxy login config:
+      --proxy.header=              Header which will contain user name (default: X-User) [$PROXY_HEADER]
+      --proxy.logout=              Logout redirect [$PROXY_LOGOUT]
+
+Database configuration:
+      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)) [$DB_URL]
+      --db.max-conn=               Maximum number of opened connections to database (default: 10) [$DB_MAX_CONN]
+      --db.idle-conn=              Maximum number of idle connections to database (default: 1) [$DB_IDLE_CONN]
+      --db.idle-timeout=           Maximum amount of time a connection may be idle (default: 0) [$DB_IDLE_TIMEOUT]
+      --db.conn-life-time=         Maximum amount of time a connection may be reused (default: 0) [$DB_CONN_LIFE_TIME]
+
+Cache configuration:
+      --cache.ttl=                 Maximum live time of token in cache. Also forceful reload time (default: 15s) [$CACHE_TTL]
+
+Stats configuration:
+      --stats.buffer=              Buffer size for hits (default: 2048) [$STATS_BUFFER]
+      --stats.interval=            Statistics interval (default: 5s) [$STATS_INTERVAL]
+
+Debug:
+      --debug.enable               Enable debug mode [$DEBUG_ENABLE]
+      --debug.impersonate=         Disable normal auth and use static user name [$DEBUG_IMPERSONATE]
+
+Help Options:
+  -h, --help                       Show this help message
+```
+
 ## Stats
 
 token-login has the capability to periodically transfer from the internal in-memory statistics to a persistent
 database. These statistics encompass usage count and last access date. The interval of this transfer is adjustable, and
 serves as a balance between the load on the database and the accuracy/actuality of the statistics.
 
-    Application Options:
-      --stats-interval=            Interval of statistics synchronization (default: 1s) [$STATS_INTERVAL]
+    Stats configuration:
+
+      --stats.buffer=              Buffer size for hits (default: 2048) [$STATS_BUFFER]
+      --stats.interval=            Statistics interval (default: 5s) [$STATS_INTERVAL]
 
 For example, dump stats every minute:
 
-    token-login --stats-interval 1m
+    token-login --stats.interval 1m
 
 ## HTTP server
 
@@ -204,19 +295,18 @@ For example with Postgres (user and password `postgress`, host - `db`):
 ## Cache
 
 To optimize performance and reduce the load on the database, token-login uses an internal in-memory cache. The cache
-has a configurable TTL (time-to-live) and maximum number of elements. Although an external cache system may be explored
+has a configurable TTL (time-to-live). Although an external cache system may be explored
 in the future, the current approach should be adequate for most use cases. It also eliminates several security and
 logical concerns that can arise with external caches.
 
 Please check [Security](#security) section for possible security impact.
 
     Cache configuration:
-      --cache.limit=               Maximum number of tokens in cache (default: 1024) [$CACHE_LIMIT]
       --cache.ttl=                 Maximum live time of token in cache (default: 15s) [$CACHE_TTL]
 
-For example, with cache TTL 1 minute and limit with up to 4000 items:
+For example, with cache TTL 1 minute:
 
-    token-login --cache.limit 4000 --cache.ttl 1m
+    token-login --cache.ttl 1m
 
 ## Authorization
 
@@ -441,11 +531,45 @@ Bruteforce math:
 It's worth noting that while the token stored in hashes only, it's still highly recommended to renew all
 tokens in the event of a storage compromise.
 
-To enhance system performance, tokens are cached locally in a Least Recently Used (LRU) cache with a configurable
-time-to-live (TTL) for each cached item. The LRU cache size and TTL can be adjusted based on system requirements.
-However, it's critical to prioritize security considerations when determining these parameters. Increasing the LRU cache
-size can lead to higher memory consumption, while increasing the TTL may result in longer latencies for reflecting
+To enhance system performance, tokens are cached locally in a cache with a configurable
+time-to-live (TTL) for each cached item. The TTL can be adjusted based on system requirements.
+However, it's critical to prioritize security considerations when determining these parameters. Increasing the TTL may
+result in longer latencies for reflecting
 changes in the token store and local cache. It's important to note that when using authentication tokens with a high
 TTL, there is a risk that a refreshed or removed token may still be available in cache and used for
 authorization. It's important to maintain an appropriate balance between performance and security when tuning these
 configurations.
+
+# Contributing
+
+Requirements:
+
+- go (see version in go.mod)
+- make
+- node + npm LTS (UI only)
+- docker
+
+For debugging
+
+```
+go run ./cmd/token-login/main.go --debug.enable --debug.impersonate admin
+```
+
+For tests
+
+```
+make test
+```
+
+For local snapshot
+
+```
+make snapshot
+```
+
+# Changelog
+
+## 1.2.0
+
+- `--stats-interval` moved to `--stats.interval`
+- `--cache.limit` removed; all keys are cached in memory

@@ -80,6 +80,8 @@ var (
 	DefaultLabel string
 	// DefaultPath holds the default value on creation for the "path" field.
 	DefaultPath string
+	// DefaultHost holds the default value on creation for the "host" field.
+	DefaultHost string
 	// DefaultRequests holds the default value on creation for the "requests" field.
 	DefaultRequests int64
 	// DefaultLastAccessAt holds the default value on creation for the "last_access_at" field.

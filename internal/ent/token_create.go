@@ -101,6 +101,14 @@ func (tc *TokenCreate) SetHost(s string) *TokenCreate {
 	return tc
 }
 
+// SetNillableHost sets the "host" field if the given value is not nil.
+func (tc *TokenCreate) SetNillableHost(s *string) *TokenCreate {
+	if s != nil {
+		tc.SetHost(*s)
+	}
+	return tc
+}
+
 // SetHeaders sets the "headers" field.
 func (tc *TokenCreate) SetHeaders(t types.Headers) *TokenCreate {
 	tc.mutation.SetHeaders(t)
@@ -132,6 +140,12 @@ func (tc *TokenCreate) SetNillableLastAccessAt(t *time.Time) *TokenCreate {
 	if t != nil {
 		tc.SetLastAccessAt(*t)
 	}
+	return tc
+}
+
+// SetID sets the "id" field.
+func (tc *TokenCreate) SetID(i int) *TokenCreate {
+	tc.mutation.SetID(i)
 	return tc
 }
 
@@ -185,6 +199,10 @@ func (tc *TokenCreate) defaults() {
 	if _, ok := tc.mutation.Path(); !ok {
 		v := token.DefaultPath
 		tc.mutation.SetPath(v)
+	}
+	if _, ok := tc.mutation.Host(); !ok {
+		v := token.DefaultHost
+		tc.mutation.SetHost(v)
 	}
 	if _, ok := tc.mutation.Requests(); !ok {
 		v := token.DefaultRequests
@@ -250,8 +268,10 @@ func (tc *TokenCreate) sqlSave(ctx context.Context) (*Token, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int(id)
+	}
 	tc.mutation.id = &_node.ID
 	tc.mutation.done = true
 	return _node, nil
@@ -262,6 +282,10 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec, error) {
 		_node = &Token{config: tc.config}
 		_spec = sqlgraph.NewCreateSpec(token.Table, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
 	)
+	if id, ok := tc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = id
+	}
 	if value, ok := tc.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -361,7 +385,7 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
 					id := specs[i].ID.Value.(int64)
 					nodes[i].ID = int(id)
 				}

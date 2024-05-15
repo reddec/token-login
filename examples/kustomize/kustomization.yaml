@@ -1,0 +1,6 @@
+namespace: token-login
+resources:
+  - ns.yaml
+  - deployment.yaml
+  - secrets.yaml
+  - ingress.yaml

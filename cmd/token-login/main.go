@@ -8,28 +8,32 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
-	"github.com/reddec/token-login/internal/dbo"
-
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/gomodule/redigo/redis"
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/reddec/token-login/internal/validator"
+	"github.com/reddec/token-login/api"
+	"github.com/reddec/token-login/internal/cache"
+	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/plumbing"
+	"github.com/reddec/token-login/internal/server"
+	"github.com/reddec/token-login/internal/utils"
+
 	"github.com/reddec/token-login/web"
-	"github.com/reddec/token-login/web/controllers/utils"
 )
 
 //nolint:gochecknoglobals
@@ -55,11 +59,16 @@ type Config struct {
 		ConnLifeTime time.Duration `long:"conn-life-time" env:"CONN_LIFE_TIME" description:"Maximum amount of time a connection may be reused" default:"0"`
 	} `group:"Database configuration" namespace:"db" env-namespace:"DB"`
 	Cache struct {
-		Limit int           `long:"limit" env:"LIMIT" description:"Maximum number of tokens in cache" default:"1024"`
-		TTL   time.Duration `long:"ttl" env:"TTL" description:"Maximum live time of token in cache" default:"15s"`
+		TTL time.Duration `long:"ttl" env:"TTL" description:"Maximum live time of token in cache. Also forceful reload time" default:"15s"`
 	} `group:"Cache configuration" namespace:"cache" env-namespace:"CACHE"`
-
-	StatsInterval time.Duration `long:"stats-interval" env:"STATS_INTERVAL" description:"Interval of statistics synchronization" default:"1s"`
+	Stats struct {
+		Buffer   int           `long:"buffer" env:"BUFFER" description:"Buffer size for hits" default:"2048"`
+		Interval time.Duration `long:"interval" env:"INTERVAL" description:"Statistics interval" default:"5s"`
+	} `group:"Stats configuration" namespace:"stats" env-namespace:"STATS"`
+	Debug struct {
+		Enable      bool   `long:"enable" env:"ENABLE" description:"Enable debug mode"`
+		Impersonate string `long:"impersonate" env:"IMPERSONATE" description:"Disable normal auth and use static user name"`
+	} `group:"Debug" namespace:"debug" env-namespace:"DEBUG"`
 }
 
 //nolint:maligned
@@ -120,23 +129,51 @@ func main() {
 }
 
 func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
+	config.setupLogging()
+
 	// setup db
-	store, err := dbo.New(ctx, config.DB.URL, config.configureDatabase)
+	store, err := ent.New(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}
 	defer store.Close()
 
+	hitsCache := make(chan web.Hit, config.Stats.Buffer)
+	keysCache := cache.New(store)
+
+	if err := keysCache.SyncKeys(ctx); err != nil {
+		// initial sync
+		return fmt.Errorf("sync keys: %w", err)
+	}
+	srv := server.New(store)
+	apiServer, err := api.NewServer(srv)
+	if err != nil {
+		return fmt.Errorf("create api server: %w", err)
+	}
+	srv.OnRemove(keysCache.Drop)
+	srv.OnUpdate(func(id int) {
+		if err := keysCache.SyncKey(ctx, id); err != nil {
+			slog.Error("sync key failed", "id", id, "err", err)
+		}
+	})
+
 	// setup runners
 	var wg multierror.Group
 
-	// setup validation
-	tokenValidator := validator.NewValidator(store, config.Cache.Limit, config.Cache.TTL)
+	// setup db->cache key sync
 	wg.Go(func() error {
-		log.Println("starting stats dump every", config.StatsInterval)
-		workerDumpStats(ctx, config, tokenValidator)
+		defer cancel()
+		keysCache.PollKeys(ctx, config.Cache.TTL)
 		return nil
 	})
+
+	// setup stats->db sync
+	wg.Go(func() error {
+		defer cancel()
+		plumbing.SyncStats(ctx, store, hitsCache, config.Stats.Interval)
+		return nil
+	})
+
 	// setup auth server
 	wg.Go(func() error {
 		defer cancel()
@@ -144,38 +181,41 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
 			writer.WriteHeader(http.StatusNoContent)
 		})
-		router.Mount("/", web.AuthHandler(tokenValidator))
+		router.Mount("/", web.AuthHandler(keysCache, hitsCache))
 		return config.Auth.Run(ctx, cancel, "auth server", router)
 	})
+
 	// setup Admin server
 	router := chi.NewRouter()
-	router.Use(withOWASPHeaders)
+	if config.Debug.Enable {
+		router.Use(func(handler http.Handler) http.Handler {
+			// enable logging
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				started := time.Now()
+				handler.ServeHTTP(w, r)
+				dur := time.Since(started)
+				slog.Debug("http request complete", "method", r.Method, "path", r.URL.Path, "duration", dur)
+			})
+		})
+		router.Use(cors.AllowAll().Handler)
+	} else {
+		router.Use(withOWASPHeaders)
+	}
 	authMW := config.authMiddleware(ctx, router)
-	router.With(authMW).Mount("/", web.NewAdmin(store))
+
+	router.With(authMW).Route("/", func(r chi.Router) {
+		r.Mount(api.Prefix+"/", http.StripPrefix(api.Prefix, apiServer))
+		r.Mount("/", http.FileServerFS(web.Assets()))
+	})
+
 	wg.Go(func() error {
 		defer cancel()
 		return config.Admin.Run(ctx, cancel, "admin server", router)
 	})
-	log.Println("Ready. Version:", version)
+	slog.Info("ready", "version", version, "debug", config.Debug.Enable)
 	<-ctx.Done()
 	cancel()
 	return wg.Wait().ErrorOrNil()
-}
-
-func workerDumpStats(ctx context.Context, config Config, validator *validator.Validator) {
-	t := time.NewTicker(config.StatsInterval)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-		if err := validator.UpdateStats(ctx); err != nil {
-			log.Println("failed update stats:", err)
-		}
-	}
 }
 
 func (cfg Config) configureDatabase(db *sql.DB) {
@@ -204,10 +244,10 @@ func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name stri
 		defer cancel()
 		var err error
 		if srv.TLS {
-			log.Println(name, "- starting TLS server on", srv.Bind)
+			slog.Info("starting TLS server", "bind", srv.Bind, "name", name)
 			err = httpServer.ListenAndServeTLS(srv.Cert, srv.Key)
 		} else {
-			log.Println(name, "- starting plain HTTP server on", srv.Bind)
+			slog.Info("starting plain server", "bind", srv.Bind, "name", name)
 			err = httpServer.ListenAndServe()
 		}
 		if errors.Is(err, http.ErrServerClosed) {
@@ -218,7 +258,7 @@ func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name stri
 
 	wg.Go(func() error {
 		<-ctx.Done()
-		log.Println(name, "- stopping")
+		slog.Info("stopping server", "name", name)
 		tctx, tcancel := context.WithTimeout(context.Background(), srv.Graceful)
 		defer tcancel()
 		return httpServer.Shutdown(tctx)
@@ -275,7 +315,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 			// no system, no custom
 			return fmt.Errorf("read CA: %w", err)
 		}
-		log.Println("failed read custom CA:", err)
+		slog.Warn("failed read custom CA", "error", err)
 		return nil
 	}
 
@@ -283,12 +323,16 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 		if srv.IgnoreSystemCA {
 			return errors.New("CA certs failed to load")
 		}
-		log.Println("failed add custom CA to pool")
+		slog.Warn("failed add custom CA to pool")
 	}
 	return nil
 }
 
 func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(handler http.Handler) http.Handler {
+	if cfg.Debug.Impersonate != "" {
+		slog.Warn("Authorization disabled", "user", cfg.Debug.Impersonate)
+		return (&NoAuth{User: cfg.Debug.Impersonate}).createMiddleware(router)
+	}
 	switch cfg.Login {
 	case "basic":
 		return cfg.Basic.createMiddleware(router)
@@ -299,6 +343,18 @@ func (cfg Config) authMiddleware(ctx context.Context, router chi.Router) func(ha
 	default:
 		panic("unknown login method " + cfg.Login)
 	}
+}
+
+func (cfg Config) setupLogging() {
+	if !cfg.Debug.Enable {
+		return
+	}
+	lvl := new(slog.LevelVar)
+	lvl.Set(slog.LevelDebug)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: lvl,
+	}))
+	slog.SetDefault(logger)
 }
 
 func (cfg *OIDC) emailsFilter() map[string]bool {
@@ -354,7 +410,8 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 	return func(handler http.Handler) http.Handler {
 		return login.SecureFunc(func(writer http.ResponseWriter, request *http.Request) {
 			token := oidclogin.Token(request)
-			handler.ServeHTTP(writer, utils.WithUser(request, oidclogin.User(token)))
+			request = request.WithContext(utils.WithUser(request.Context(), oidclogin.User(token)))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }
@@ -368,6 +425,7 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 		writer.WriteHeader(http.StatusSeeOther)
 	})
 	return func(handler http.Handler) http.Handler {
+		//nolint:canonicalheader
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			if utils.GetFlash(writer, request, flash) == "true" {
 				writer.Header().Set("WWW-Authenticate", `Basic realm="`+cfg.Realm+`", charset="UTF-8"`)
@@ -382,7 +440,8 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 				http.Error(writer, "Authorization required", http.StatusUnauthorized)
 				return
 			}
-			handler.ServeHTTP(writer, utils.WithUser(request, user))
+			request = request.WithContext(utils.WithUser(request.Context(), user))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }
@@ -399,12 +458,31 @@ func (pa *ProxyAuth) createMiddleware(router chi.Router) func(http.Handler) http
 	})
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			handler.ServeHTTP(writer, utils.WithUser(request, request.Header.Get(pa.Header)))
+			request = request.WithContext(utils.WithUser(request.Context(), request.Header.Get(pa.Header)))
+			handler.ServeHTTP(writer, request)
+		})
+	}
+}
+
+type NoAuth struct {
+	User string
+}
+
+func (na *NoAuth) createMiddleware(router chi.Router) func(http.Handler) http.Handler {
+	router.Get("/oauth/logout", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Location", "")
+		writer.WriteHeader(http.StatusSeeOther)
+	})
+	return func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			request = request.WithContext(utils.WithUser(request.Context(), na.User))
+			handler.ServeHTTP(writer, request)
 		})
 	}
 }
 
 func withOWASPHeaders(handler http.Handler) http.Handler {
+	//nolint:canonicalheader
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		headers := writer.Header()
 		headers.Set("X-Frame-Options", "DENY") // helps with click hijacking

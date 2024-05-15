@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "token-login"
+spec:
+  ports:
+    - name: admin
+      port: 8080
+      targetPort: http-admin
+
+    - name: auth
+      port: 8081
+      targetPort: http-auth
+  selector:
+    kind: "token-login"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "token-login"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kind: "token-login"
+  template:
+    metadata:
+      labels:
+        kind: "token-login"
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+        runAsNonRoot: true
+      restartPolicy: Always
+      enableServiceLinks: false
+      containers:
+        - name: "token-login"
+          image: "ghcr.io/reddec/token-login:latest"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ "ALL" ]
+          env:
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: requests.memory
+
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: token-login
+                  key: DB_URL
+
+            - name: LOGIN
+              value: basic
+
+            - name: BASIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: token-login
+                  key: BASIC_PASSWORD
+
+          ports:
+            # for web UI
+            - name: http-admin
+              containerPort: 8080
+              protocol: TCP
+
+            # for auth sub-request
+            - name: http-auth
+              containerPort: 8081
+              protocol: TCP
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 8Mi
