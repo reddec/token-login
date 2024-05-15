@@ -13,7 +13,7 @@ import (
 	_ "modernc.org/sqlite"             // driver
 )
 
-func New(ctx context.Context, rawURL string, hook func(db *sql.DB)) (*Client, error) { //nolint:ireturn
+func New(ctx context.Context, rawURL string, hook func(db *sql.DB)) (*Client, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse DSN: %w", err)

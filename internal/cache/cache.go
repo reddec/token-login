@@ -47,7 +47,7 @@ func (v *Cache) Patch(kid types.KeyID, key *Token) {
 }
 
 func (v *Cache) Drop(id int) {
-	// FIXME: for huge (thousands) keys we may want to create secondary index (O(1)) instead of linear search (O(N))
+	// note: for huge (thousands) keys we may want to create secondary index (O(1)) instead of linear search (O(N))
 	v.state.lock.Lock()
 	defer v.state.lock.Unlock()
 	for k, a := range v.state.data {
@@ -59,7 +59,7 @@ func (v *Cache) Drop(id int) {
 }
 
 func (v *Cache) FindByKey(kid types.KeyID) (*Token, bool) {
-	// TODO: support multiple KID (collisions)
+	// note: support multiple KID (collisions)
 	v.state.lock.RLock()
 	defer v.state.lock.RUnlock()
 	t, ok := v.state.data[kid]
