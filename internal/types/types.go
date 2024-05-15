@@ -13,9 +13,8 @@ import (
 )
 
 const (
-	keyDataSize = 32                      // private part
-	KeyIDSize   = 8                       // public part
-	HintChars   = (KeyIDSize * 6 / 4) - 1 //nolint:gomnd
+	keyDataSize = 32 // private part
+	KeyIDSize   = 8  // public part
 	TokenSize   = KeyIDSize + keyDataSize
 )
 

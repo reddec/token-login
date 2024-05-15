@@ -480,6 +480,7 @@ func (na *NoAuth) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 	}
 }
 
+//nolint:canonicalheader
 func withOWASPHeaders(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		headers := writer.Header()
