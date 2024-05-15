@@ -425,6 +425,7 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 		writer.WriteHeader(http.StatusSeeOther)
 	})
 	return func(handler http.Handler) http.Handler {
+		//nolint:canonicalheader
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			if utils.GetFlash(writer, request, flash) == "true" {
 				writer.Header().Set("WWW-Authenticate", `Basic realm="`+cfg.Realm+`", charset="UTF-8"`)
@@ -480,8 +481,8 @@ func (na *NoAuth) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 	}
 }
 
-//nolint:canonicalheader
 func withOWASPHeaders(handler http.Handler) http.Handler {
+	//nolint:canonicalheader
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		headers := writer.Header()
 		headers.Set("X-Frame-Options", "DENY") // helps with click hijacking
