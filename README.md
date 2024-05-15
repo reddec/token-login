@@ -134,6 +134,86 @@ For production use, it's strongly recommended to configure at least the [authori
 
 All configuration parameters can be set via command line arguments and/or environment variables.
 
+```
+Usage:
+  token-login [OPTIONS]
+
+Forward-auth server for tokens
+token-login dev, commit none, built at unknown by unknown
+Author: Aleksandr Baryshnikov <owner@reddec.net>
+
+Application Options:
+      --login=[basic|oidc|proxy]   Login method for admin UI (default: basic) [$LOGIN]
+
+Admin server configuration:
+      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
+      --admin.tls                  Enable TLS [$ADMIN_TLS]
+      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
+      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
+      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
+      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
+      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
+      --admin.read-header-timeout= How long to read header from the request (default: 3s) [$ADMIN_READ_HEADER_TIMEOUT]
+      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
+
+Auth server configuration:
+      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
+      --auth.tls                   Enable TLS [$AUTH_TLS]
+      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
+      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
+      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
+      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
+      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
+      --auth.read-header-timeout=  How long to read header from the request (default: 3s) [$AUTH_READ_HEADER_TIMEOUT]
+      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+
+OIDC login config:
+      --oidc.client-id=            Client ID [$OIDC_CLIENT_ID]
+      --oidc.client-secret=        Client secret [$OIDC_CLIENT_SECRET]
+      --oidc.issuer=               OIDC issuer URL [$OIDC_ISSUER]
+      --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
+      --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
+      --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+
+OIDC Redis session configuration:
+      --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
+      --oidc.redis.keep-alive=     Keep-alive interval (default: 30s) [$OIDC_REDIS_KEEP_ALIVE]
+      --oidc.redis.timeout=        Read/Write/Connect timeout (default: 5s) [$OIDC_REDIS_TIMEOUT]
+      --oidc.redis.max-conn=       Maximum number of active connections (default: 10) [$OIDC_REDIS_MAX_CONN]
+      --oidc.redis.max-idle=       Maximum number of idle connections (default: 1) [$OIDC_REDIS_MAX_IDLE]
+      --oidc.redis.idle-timeout=   Close connections after remaining idle for this duration (default: 30s) [$OIDC_REDIS_IDLE_TIMEOUT]
+
+Basic login config:
+      --basic.realm=               Realm name (default: token-login) [$BASIC_REALM]
+      --basic.user=                User name (default: admin) [$BASIC_USER]
+      --basic.password=            User password hash from bcrypt (default: $2y$05$d1BT6ay8qzViEGUjo4UDkOatWkFlszDfyzaXxCkM84kVhEJLtkXcu) [$BASIC_PASSWORD]
+
+Proxy login config:
+      --proxy.header=              Header which will contain user name (default: X-User) [$PROXY_HEADER]
+      --proxy.logout=              Logout redirect [$PROXY_LOGOUT]
+
+Database configuration:
+      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)) [$DB_URL]
+      --db.max-conn=               Maximum number of opened connections to database (default: 10) [$DB_MAX_CONN]
+      --db.idle-conn=              Maximum number of idle connections to database (default: 1) [$DB_IDLE_CONN]
+      --db.idle-timeout=           Maximum amount of time a connection may be idle (default: 0) [$DB_IDLE_TIMEOUT]
+      --db.conn-life-time=         Maximum amount of time a connection may be reused (default: 0) [$DB_CONN_LIFE_TIME]
+
+Cache configuration:
+      --cache.ttl=                 Maximum live time of token in cache. Also forceful reload time (default: 15s) [$CACHE_TTL]
+
+Stats configuration:
+      --stats.buffer=              Buffer size for hits (default: 2048) [$STATS_BUFFER]
+      --stats.interval=            Statistics interval (default: 5s) [$STATS_INTERVAL]
+
+Debug:
+      --debug.enable               Enable debug mode [$DEBUG_ENABLE]
+      --debug.impersonate=         Disable normal auth and use static user name [$DEBUG_IMPERSONATE]
+
+Help Options:
+  -h, --help                       Show this help message
+```
+
 ## Stats
 
 token-login has the capability to periodically transfer from the internal in-memory statistics to a persistent
@@ -486,3 +566,10 @@ For local snapshot
 ```
 make snapshot
 ```
+
+# Changelog
+
+## 1.2.0
+
+- `--stats-interval` moved to `--stats.interval`
+- `--cache.limit` removed; all keys are cached in memory
