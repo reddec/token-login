@@ -106,6 +106,8 @@ annotations:
     proxy_set_header X-Forwarded-Uri $request_uri;
 ```
 
+**Kustomization** - [example here](./examples/kustomize)
+
 ## Versioning
 
 The Token login follows a classic semantic versioning approach, where the major version indicates forward compatibility

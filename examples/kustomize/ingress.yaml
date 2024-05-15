@@ -1,0 +1,27 @@
+---
+#
+# This example assumes ingress-nginx and let's encrypt cluster issuer
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "tokens"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "token-login.example.com"
+      secretName: "token-login-tls"
+  rules:
+    - host: "token-login.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: token-login
+                port:
+                  number: 8080
