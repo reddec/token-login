@@ -19,8 +19,15 @@ devices, from Raspberry Pi to Xeon multi-core cloud servers.
 All components of Token-login are designed to work in a cloud-native environment, allowing users to utilize it as a
 standalone application, as part of container deployment (e.g., docker-compose), or as part of a Kubernetes cluster.
 
+Since 1.2.0 token-login offers a comprehensive secure [API](openapi.yaml) with full parity to UI.
 
-![Screenshot from 2024-05-10 22-18-05](https://github.com/reddec/token-login/assets/6597086/51b46cd3-8c98-4545-8ed5-fda9762cc5de)
+**main page**
+
+![main](https://github.com/reddec/token-login/assets/6597086/4d73e838-f135-4c47-9ed2-39c06e572341)
+
+**details**
+
+![details](https://github.com/reddec/token-login/assets/6597086/d8b06c71-23b1-4684-a034-1ad72c27d1a3)
 
 ## Installation
 
@@ -131,12 +138,14 @@ token-login has the capability to periodically transfer from the internal in-mem
 database. These statistics encompass usage count and last access date. The interval of this transfer is adjustable, and
 serves as a balance between the load on the database and the accuracy/actuality of the statistics.
 
-    Application Options:
-      --stats-interval=            Interval of statistics synchronization (default: 1s) [$STATS_INTERVAL]
+    Stats configuration:
+
+      --stats.buffer=              Buffer size for hits (default: 2048) [$STATS_BUFFER]
+      --stats.interval=            Statistics interval (default: 5s) [$STATS_INTERVAL]
 
 For example, dump stats every minute:
 
-    token-login --stats-interval 1m
+    token-login --stats.interval 1m
 
 ## HTTP server
 
@@ -204,19 +213,18 @@ For example with Postgres (user and password `postgress`, host - `db`):
 ## Cache
 
 To optimize performance and reduce the load on the database, token-login uses an internal in-memory cache. The cache
-has a configurable TTL (time-to-live) and maximum number of elements. Although an external cache system may be explored
+has a configurable TTL (time-to-live). Although an external cache system may be explored
 in the future, the current approach should be adequate for most use cases. It also eliminates several security and
 logical concerns that can arise with external caches.
 
 Please check [Security](#security) section for possible security impact.
 
     Cache configuration:
-      --cache.limit=               Maximum number of tokens in cache (default: 1024) [$CACHE_LIMIT]
       --cache.ttl=                 Maximum live time of token in cache (default: 15s) [$CACHE_TTL]
 
-For example, with cache TTL 1 minute and limit with up to 4000 items:
+For example, with cache TTL 1 minute:
 
-    token-login --cache.limit 4000 --cache.ttl 1m
+    token-login --cache.ttl 1m
 
 ## Authorization
 
@@ -441,10 +449,10 @@ Bruteforce math:
 It's worth noting that while the token stored in hashes only, it's still highly recommended to renew all
 tokens in the event of a storage compromise.
 
-To enhance system performance, tokens are cached locally in a Least Recently Used (LRU) cache with a configurable
-time-to-live (TTL) for each cached item. The LRU cache size and TTL can be adjusted based on system requirements.
-However, it's critical to prioritize security considerations when determining these parameters. Increasing the LRU cache
-size can lead to higher memory consumption, while increasing the TTL may result in longer latencies for reflecting
+To enhance system performance, tokens are cached locally in a cache with a configurable
+time-to-live (TTL) for each cached item. The TTL can be adjusted based on system requirements.
+However, it's critical to prioritize security considerations when determining these parameters. Increasing the TTL may
+result in longer latencies for reflecting
 changes in the token store and local cache. It's important to note that when using authentication tokens with a high
 TTL, there is a risk that a refreshed or removed token may still be available in cache and used for
 authorization. It's important to maintain an appropriate balance between performance and security when tuning these
