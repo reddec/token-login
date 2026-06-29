@@ -1,23 +1,27 @@
+version: "2"
+
 run:
   tests: false
+
 linters:
   enable-all: true
   disable:
-    - goerr113
-    - contextcheck
-    - exhaustivestruct
-    - wrapcheck
-    - varnamelen
-    - exhaustruct
-    - lll
-    - wsl
-    - nlreturn
-    - gofumpt
-    - funlen
-    - gci
-    - nonamedreturns
-    - interfacer
-    - maligned
-    - tagalign
-    - depguard
-    - structcheck
+  - errcheck
+
+  exclusions:
+    rules:
+      - linters:
+          - govet
+        text: "inline:"
+      - linters:
+          - gosec
+        path: internal/utils/utils.go
+        text: "G124"
+      - linters:
+          - contextcheck
+        path: cmd/token-login/main.go
+        text: "Non-inherited new context"
+      - linters:
+          - recvcheck
+        path: internal/types/types.go
+        text: "KeyID"

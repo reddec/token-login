@@ -1,4 +1,6 @@
 /*.sqlite
+.claude
+.agents
 .idea
 .vscode
 .DS_Store
