@@ -20,6 +20,24 @@ jobs:
       - name: Checkout LFS objects
         run: git lfs checkout
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          cache-dependency-path: 'web/admin-ui/package-lock.json'
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+
+      - name: Build frontend
+        run: |
+          cd web/admin-ui
+          npm install
+          npm run build
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
