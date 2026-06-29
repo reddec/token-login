@@ -1,53 +1,48 @@
-<table>
-  <tr>
-    <td>
-      <a href="https://www.amazon.com/dp/B08D6T6BKS/"><img src="https://static.packt-cdn.com/products/9781839213625/cover/smaller" width="120" /></a>
-    </td>
-    <td>
-      <h3>Svelte 3 Up and Running</h3>
-      <p>Want to learn Svelte 3 and how to build a Single-Page App (SPA) with it (and with this router)? Check out my book <a href="https://www.amazon.com/dp/B08D6T6BKS/">Svelte 3 Up and Running</a> on Amazon.</p>
-    </td>
-</table>
+# .
 
-# Svelte app with svelte-spa-router
+This template should help get you started developing with Vue 3 in Vite.
 
-This is a project template for [Svelte 4](https://svelte.dev) apps that includes [svelte-spa-router](https://github.com/italypaleale/svelte-spa-router) for client-side routing, TypeScript, and Vite as bundler.
+## Recommended IDE Setup
 
-## About svelte-spa-router
+[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-svelte-spa-router is a client-side router for Svelte 4 apps that leverages hash-based routing (i.e. stores the current view in the URL after the `#` symbol).
+## Recommended Browser Setup
 
-You can read more about the router, and the reasons why you might want to use hash-based routing (or not), in the [documentation](https://github.com/italypaleale/svelte-spa-router).
+- Chromium-based browsers (Chrome, Edge, Brave, etc.):
+  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
+- Firefox:
+  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
 
-## Get started
+## Type Support for `.vue` Imports in TS
 
-Install the dependencies…
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
 
-```bash
-cd svelte-app
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
 npm install
 ```
 
-…then start a dev server using [Vite](https://vite.dev):
+### Compile and Hot-Reload for Development
 
-```bash
+```sh
 npm run dev
 ```
 
-Navigate to [http://localhost:5050](http://localhost:5050). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
+### Type-Check, Compile and Minify for Production
 
-You can add more routes by defining them in the [`src/routes.ts`](./src/routes.ts) file. More information can be found on the [documentation for svelte-spa-router](https://github.com/ItalyPaleAle/svelte-spa-router/blob/main/README.md).
-
-By default, the server will only respond to requests from localhost. To allow connections from other computers, edit the `vite` commands in package.json to include the option `--host 0.0.0.0`.
-
-If you're using [Visual Studio Code](https://code.visualstudio.com/) we recommend installing the official extension [Svelte for VS Code](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode). If you are using other editors you may need to install a plugin in order to get syntax highlighting and intellisense.
-
-## Building and running in production mode
-
-To create an optimized version of the app:
-
-```bash
+```sh
 npm run build
 ```
 
-You can run the newly-built app with `npm run preview`.
+### Lint with [ESLint](https://eslint.org/)
+
+```sh
+npm run lint
+```

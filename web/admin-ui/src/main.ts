@@ -1,7 +1,17 @@
-import App from './App.svelte';
+import './style.css'
 
-const app = new App({
-	target: document.body
-});
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 
-export default app;
+import App from './App.vue'
+import router from './router'
+import { client } from './api/client.gen'
+
+client.setConfig({ throwOnError: true })
+
+const app = createApp(App)
+
+app.use(createPinia())
+app.use(router)
+
+app.mount('#app')

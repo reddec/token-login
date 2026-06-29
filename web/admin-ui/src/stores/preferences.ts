@@ -1,19 +1,49 @@
-import { derived, writable, type Writable } from "svelte/store"
+import { reactive, watch, toRaw } from 'vue'
+import { defineStore } from 'pinia'
 
+const STORAGE_KEY = 'token-admin-prefs'
 
-const prefs = JSON.parse(localStorage.getItem("prefs") || "{}") || {}
-
-function dump() {
-    localStorage.setItem("prefs", JSON.stringify(prefs))
+interface Preferences {
+  darkMode: boolean
+  sidebarOpen: boolean
 }
 
-function usePref<T>(name: string, init: T): Writable<T> {
-    const store = writable<T>(prefs[name] || init);
-    store.subscribe((v) => {
-        prefs[name] = v
-        dump()
-    })
-    return store
+function load(): Preferences {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw) as Preferences
+  } catch {
+    /* ignore corrupt data */
+  }
+  return { darkMode: false, sidebarOpen: false }
 }
 
-export const mainDetailed = usePref("main.detailed", false);
+export const usePreferencesStore = defineStore('preferences', () => {
+  const prefs = reactive<Preferences>(load())
+
+  watch(
+    () => ({ ...prefs }),
+    (val) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toRaw(val)))
+    },
+    { deep: true },
+  )
+
+  watch(
+    () => prefs.darkMode,
+    (val) => {
+      document.documentElement.classList.toggle('dark', val)
+    },
+    { immediate: true },
+  )
+
+  function toggleDark() {
+    prefs.darkMode = !prefs.darkMode
+  }
+
+  function toggleSidebar() {
+    prefs.sidebarOpen = !prefs.sidebarOpen
+  }
+
+  return { prefs, toggleDark, toggleSidebar }
+})
