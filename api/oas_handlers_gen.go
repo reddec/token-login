@@ -7,13 +7,110 @@ import (
 	"net/http"
 
 	"github.com/go-faster/errors"
-
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
 )
 
+type codeRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (c *codeRecorder) WriteHeader(status int) {
+	c.status = status
+	c.ResponseWriter.WriteHeader(status)
+}
+
+func (c *codeRecorder) Unwrap() http.ResponseWriter {
+	return c.ResponseWriter
+}
+
 func recordError(string, error) {}
+
+// handleCreateProjectRequest handles createProject operation.
+//
+// Create new project.
+//
+// POST /projects
+func (s *Server) handleCreateProjectRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateProjectOperation,
+			ID:   "createProject",
+		}
+	)
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateProjectRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *Project
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateProjectOperation,
+			OperationSummary: "",
+			OperationID:      "createProject",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = *ProjectConfig
+			Params   = struct{}
+			Response = *Project
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateProject(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateProject(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCreateProjectResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
 
 // handleCreateTokenRequest handles createToken operation.
 //
@@ -21,16 +118,20 @@ func recordError(string, error) {}
 //
 // POST /tokens
 func (s *Server) handleCreateTokenRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: "CreateToken",
+			Name: CreateTokenOperation,
 			ID:   "createToken",
 		}
 	)
-	request, close, err := s.decodeCreateTokenRequest(r)
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateTokenRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -50,16 +151,17 @@ func (s *Server) handleCreateTokenRequest(args [0]string, argsEscaped bool, w ht
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "CreateToken",
+			OperationName:    CreateTokenOperation,
 			OperationSummary: "",
 			OperationID:      "createToken",
 			Body:             request,
+			RawBody:          rawBody,
 			Params:           middleware.Parameters{},
 			Raw:              r,
 		}
 
 		type (
-			Request  = *Config
+			Request  = *TokenConfig
 			Params   = struct{}
 			Response = *Credential
 		)
@@ -94,18 +196,104 @@ func (s *Server) handleCreateTokenRequest(args [0]string, argsEscaped bool, w ht
 	}
 }
 
+// handleDeleteProjectRequest handles deleteProject operation.
+//
+// Delete project.
+//
+// DELETE /projects/{project}
+func (s *Server) handleDeleteProjectRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DeleteProjectOperation,
+			ID:   "deleteProject",
+		}
+	)
+	params, err := decodeDeleteProjectParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *DeleteProjectNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DeleteProjectOperation,
+			OperationSummary: "",
+			OperationID:      "deleteProject",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "project",
+					In:   "path",
+				}: params.Project,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DeleteProjectParams
+			Response = *DeleteProjectNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDeleteProjectParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.DeleteProject(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.DeleteProject(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeDeleteProjectResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleDeleteTokenRequest handles deleteToken operation.
 //
 // Delete token for user.
 //
 // DELETE /tokens/{token}
 func (s *Server) handleDeleteTokenRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: "DeleteToken",
+			Name: DeleteTokenOperation,
 			ID:   "deleteToken",
 		}
 	)
@@ -120,14 +308,17 @@ func (s *Server) handleDeleteTokenRequest(args [1]string, argsEscaped bool, w ht
 		return
 	}
 
+	var rawBody []byte
+
 	var response *DeleteTokenNoContent
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "DeleteToken",
+			OperationName:    DeleteTokenOperation,
 			OperationSummary: "",
 			OperationID:      "deleteToken",
 			Body:             nil,
+			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
 					Name: "token",
@@ -173,18 +364,104 @@ func (s *Server) handleDeleteTokenRequest(args [1]string, argsEscaped bool, w ht
 	}
 }
 
+// handleGetProjectRequest handles getProject operation.
+//
+// Get project by ID.
+//
+// GET /projects/{project}
+func (s *Server) handleGetProjectRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetProjectOperation,
+			ID:   "getProject",
+		}
+	)
+	params, err := decodeGetProjectParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response *Project
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetProjectOperation,
+			OperationSummary: "",
+			OperationID:      "getProject",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "project",
+					In:   "path",
+				}: params.Project,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetProjectParams
+			Response = *Project
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetProjectParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetProject(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetProject(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetProjectResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetTokenRequest handles getToken operation.
 //
 // Get tokens by ID and for the current user.
 //
 // GET /tokens/{token}
 func (s *Server) handleGetTokenRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: "GetToken",
+			Name: GetTokenOperation,
 			ID:   "getToken",
 		}
 	)
@@ -199,14 +476,17 @@ func (s *Server) handleGetTokenRequest(args [1]string, argsEscaped bool, w http.
 		return
 	}
 
+	var rawBody []byte
+
 	var response *Token
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "GetToken",
+			OperationName:    GetTokenOperation,
 			OperationSummary: "",
 			OperationID:      "getToken",
 			Body:             nil,
+			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
 					Name: "token",
@@ -252,26 +532,31 @@ func (s *Server) handleGetTokenRequest(args [1]string, argsEscaped bool, w http.
 	}
 }
 
-// handleListTokensRequest handles listTokens operation.
+// handleListProjectsRequest handles listProjects operation.
 //
-// List all tokens for user.
+// List all projects.
 //
-// GET /tokens
-func (s *Server) handleListTokensRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /projects
+func (s *Server) handleListProjectsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err error
 	)
 
-	var response []Token
+	var rawBody []byte
+
+	var response []Project
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "ListTokens",
+			OperationName:    ListProjectsOperation,
 			OperationSummary: "",
-			OperationID:      "listTokens",
+			OperationID:      "listProjects",
 			Body:             nil,
+			RawBody:          rawBody,
 			Params:           middleware.Parameters{},
 			Raw:              r,
 		}
@@ -279,7 +564,7 @@ func (s *Server) handleListTokensRequest(args [0]string, argsEscaped bool, w htt
 		type (
 			Request  = struct{}
 			Params   = struct{}
-			Response = []Token
+			Response = []Project
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -290,12 +575,96 @@ func (s *Server) handleListTokensRequest(args [0]string, argsEscaped bool, w htt
 			mreq,
 			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListTokens(ctx)
+				response, err = s.h.ListProjects(ctx)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ListTokens(ctx)
+		response, err = s.h.ListProjects(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListProjectsResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListTokensRequest handles listTokens operation.
+//
+// List all tokens for user.
+//
+// GET /tokens
+func (s *Server) handleListTokensRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListTokensOperation,
+			ID:   "listTokens",
+		}
+	)
+	params, err := decodeListTokensParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response []Token
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListTokensOperation,
+			OperationSummary: "",
+			OperationID:      "listTokens",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "project",
+					In:   "query",
+				}: params.Project,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListTokensParams
+			Response = []Token
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListTokensParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListTokens(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListTokens(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -318,12 +687,14 @@ func (s *Server) handleListTokensRequest(args [0]string, argsEscaped bool, w htt
 //
 // POST /tokens/{token}
 func (s *Server) handleRefreshTokenRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: "RefreshToken",
+			Name: RefreshTokenOperation,
 			ID:   "refreshToken",
 		}
 	)
@@ -338,14 +709,17 @@ func (s *Server) handleRefreshTokenRequest(args [1]string, argsEscaped bool, w h
 		return
 	}
 
+	var rawBody []byte
+
 	var response *Credential
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "RefreshToken",
+			OperationName:    RefreshTokenOperation,
 			OperationSummary: "",
 			OperationID:      "refreshToken",
 			Body:             nil,
+			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
 					Name: "token",
@@ -391,18 +765,119 @@ func (s *Server) handleRefreshTokenRequest(args [1]string, argsEscaped bool, w h
 	}
 }
 
+// handleUpdateProjectRequest handles updateProject operation.
+//
+// Update project. Supports partial update.
+//
+// PATCH /projects/{project}
+func (s *Server) handleUpdateProjectRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	ctx := r.Context()
+
+	var (
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: UpdateProjectOperation,
+			ID:   "updateProject",
+		}
+	)
+	params, err := decodeUpdateProjectParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateProjectRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response *UpdateProjectNoContent
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    UpdateProjectOperation,
+			OperationSummary: "",
+			OperationID:      "updateProject",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "project",
+					In:   "path",
+				}: params.Project,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *ProjectPatch
+			Params   = UpdateProjectParams
+			Response = *UpdateProjectNoContent
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackUpdateProjectParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				err = s.h.UpdateProject(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		err = s.h.UpdateProject(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeUpdateProjectResponse(response, w); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleUpdateTokenRequest handles updateToken operation.
 //
 // Update token for user. Supports partial update.
 //
 // PATCH /tokens/{token}
 func (s *Server) handleUpdateTokenRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
 	ctx := r.Context()
 
 	var (
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: "UpdateToken",
+			Name: UpdateTokenOperation,
 			ID:   "updateToken",
 		}
 	)
@@ -416,7 +891,9 @@ func (s *Server) handleUpdateTokenRequest(args [1]string, argsEscaped bool, w ht
 		s.cfg.ErrorHandler(ctx, w, r, err)
 		return
 	}
-	request, close, err := s.decodeUpdateTokenRequest(r)
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateTokenRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -436,10 +913,11 @@ func (s *Server) handleUpdateTokenRequest(args [1]string, argsEscaped bool, w ht
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    "UpdateToken",
+			OperationName:    UpdateTokenOperation,
 			OperationSummary: "",
 			OperationID:      "updateToken",
 			Body:             request,
+			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
 					Name: "token",
@@ -450,7 +928,7 @@ func (s *Server) handleUpdateTokenRequest(args [1]string, argsEscaped bool, w ht
 		}
 
 		type (
-			Request  = *Config
+			Request  = *TokenPatch
 			Params   = UpdateTokenParams
 			Response = *UpdateTokenNoContent
 		)

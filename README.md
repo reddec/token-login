@@ -42,7 +42,7 @@ Pre-built binary releases for most major platforms (Linux/Windows/Mac) for AMD64
 
 ## From source
 
-Requires Go 1.20+
+Requires Go 1.26+
 
     go install github.com/reddec/token-login/cmd/...@latest
 
@@ -568,6 +568,17 @@ make snapshot
 ```
 
 # Changelog
+
+## 2.0.0
+
+- **Projects:** tokens are now scoped to projects — organize tokens by project, manage them from the project detail page
+- **Database:** automatic migration — existing databases are upgraded on startup; all tokens are preserved
+- **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
+- **OIDC:** new `--scopes` / `SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid`)
+- **OIDC:** new `--session-ttl` / `SESSION_TTL` flag — session lifetime (default: `168h`)
+- **OIDC:** new `--trust-proxy` / `TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
+- OIDC: session encryption enabled, proactive token refresh at half TTL
+- Minimum Go version: 1.26
 
 ## 1.2.0
 

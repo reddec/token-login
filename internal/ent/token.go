@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/reddec/token-login/internal/ent/project"
 	"github.com/reddec/token-login/internal/ent/token"
 	"github.com/reddec/token-login/internal/types"
 )
@@ -37,11 +38,36 @@ type Token struct {
 	Host string `json:"host,omitempty"`
 	// Headers holds the value of the "headers" field.
 	Headers types.Headers `json:"headers,omitempty"`
+	// ProjectID holds the value of the "project_id" field.
+	ProjectID int `json:"project_id,omitempty"`
 	// Requests holds the value of the "requests" field.
 	Requests int64 `json:"requests,omitempty"`
 	// LastAccessAt holds the value of the "last_access_at" field.
 	LastAccessAt time.Time `json:"last_access_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TokenQuery when eager-loading is set.
+	Edges        TokenEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TokenEdges holds the relations/edges for other nodes in the graph.
+type TokenEdges struct {
+	// Project holds the value of the project edge.
+	Project *Project `json:"project,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ProjectOrErr returns the Project value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TokenEdges) ProjectOrErr() (*Project, error) {
+	if e.Project != nil {
+		return e.Project, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: project.Label}
+	}
+	return nil, &NotLoadedError{edge: "project"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -51,7 +77,7 @@ func (*Token) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case token.FieldHash, token.FieldHeaders:
 			values[i] = new([]byte)
-		case token.FieldID, token.FieldRequests:
+		case token.FieldID, token.FieldProjectID, token.FieldRequests:
 			values[i] = new(sql.NullInt64)
 		case token.FieldUser, token.FieldLabel, token.FieldPath, token.FieldHost:
 			values[i] = new(sql.NullString)
@@ -68,7 +94,7 @@ func (*Token) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Token fields.
-func (t *Token) assignValues(columns []string, values []any) error {
+func (_m *Token) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -79,77 +105,83 @@ func (t *Token) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			t.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case token.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				t.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case token.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				t.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case token.FieldKeyID:
 			if value, err := token.ValueScanner.KeyID.FromValue(values[i]); err != nil {
 				return err
 			} else {
-				t.KeyID = value
+				_m.KeyID = value
 			}
 		case token.FieldHash:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field hash", values[i])
 			} else if value != nil {
-				t.Hash = *value
+				_m.Hash = *value
 			}
 		case token.FieldUser:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field user", values[i])
 			} else if value.Valid {
-				t.User = value.String
+				_m.User = value.String
 			}
 		case token.FieldLabel:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field label", values[i])
 			} else if value.Valid {
-				t.Label = value.String
+				_m.Label = value.String
 			}
 		case token.FieldPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field path", values[i])
 			} else if value.Valid {
-				t.Path = value.String
+				_m.Path = value.String
 			}
 		case token.FieldHost:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field host", values[i])
 			} else if value.Valid {
-				t.Host = value.String
+				_m.Host = value.String
 			}
 		case token.FieldHeaders:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field headers", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &t.Headers); err != nil {
+				if err := json.Unmarshal(*value, &_m.Headers); err != nil {
 					return fmt.Errorf("unmarshal field headers: %w", err)
 				}
+			}
+		case token.FieldProjectID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
+			} else if value.Valid {
+				_m.ProjectID = int(value.Int64)
 			}
 		case token.FieldRequests:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field requests", values[i])
 			} else if value.Valid {
-				t.Requests = value.Int64
+				_m.Requests = value.Int64
 			}
 		case token.FieldLastAccessAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field last_access_at", values[i])
 			} else if value.Valid {
-				t.LastAccessAt = value.Time
+				_m.LastAccessAt = value.Time
 			}
 		default:
-			t.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -157,65 +189,73 @@ func (t *Token) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the Token.
 // This includes values selected through modifiers, order, etc.
-func (t *Token) Value(name string) (ent.Value, error) {
-	return t.selectValues.Get(name)
+func (_m *Token) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
+}
+
+// QueryProject queries the "project" edge of the Token entity.
+func (_m *Token) QueryProject() *ProjectQuery {
+	return NewTokenClient(_m.config).QueryProject(_m)
 }
 
 // Update returns a builder for updating this Token.
 // Note that you need to call Token.Unwrap() before calling this method if this Token
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (t *Token) Update() *TokenUpdateOne {
-	return NewTokenClient(t.config).UpdateOne(t)
+func (_m *Token) Update() *TokenUpdateOne {
+	return NewTokenClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the Token entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (t *Token) Unwrap() *Token {
-	_tx, ok := t.config.driver.(*txDriver)
+func (_m *Token) Unwrap() *Token {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Token is not a transactional entity")
 	}
-	t.config.driver = _tx.drv
-	return t
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (t *Token) String() string {
+func (_m *Token) String() string {
 	var builder strings.Builder
 	builder.WriteString("Token(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(t.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(t.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("key_id=")
-	builder.WriteString(fmt.Sprintf("%v", t.KeyID))
+	builder.WriteString(fmt.Sprintf("%v", _m.KeyID))
 	builder.WriteString(", ")
 	builder.WriteString("hash=")
-	builder.WriteString(fmt.Sprintf("%v", t.Hash))
+	builder.WriteString(fmt.Sprintf("%v", _m.Hash))
 	builder.WriteString(", ")
 	builder.WriteString("user=")
-	builder.WriteString(t.User)
+	builder.WriteString(_m.User)
 	builder.WriteString(", ")
 	builder.WriteString("label=")
-	builder.WriteString(t.Label)
+	builder.WriteString(_m.Label)
 	builder.WriteString(", ")
 	builder.WriteString("path=")
-	builder.WriteString(t.Path)
+	builder.WriteString(_m.Path)
 	builder.WriteString(", ")
 	builder.WriteString("host=")
-	builder.WriteString(t.Host)
+	builder.WriteString(_m.Host)
 	builder.WriteString(", ")
 	builder.WriteString("headers=")
-	builder.WriteString(fmt.Sprintf("%v", t.Headers))
+	builder.WriteString(fmt.Sprintf("%v", _m.Headers))
+	builder.WriteString(", ")
+	builder.WriteString("project_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ProjectID))
 	builder.WriteString(", ")
 	builder.WriteString("requests=")
-	builder.WriteString(fmt.Sprintf("%v", t.Requests))
+	builder.WriteString(fmt.Sprintf("%v", _m.Requests))
 	builder.WriteString(", ")
 	builder.WriteString("last_access_at=")
-	builder.WriteString(t.LastAccessAt.Format(time.ANSIC))
+	builder.WriteString(_m.LastAccessAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

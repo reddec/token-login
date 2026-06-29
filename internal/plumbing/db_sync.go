@@ -65,7 +65,11 @@ func dumpStats(ctx context.Context, client *ent.Client, stats map[int]aggregatio
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 type aggregation struct {

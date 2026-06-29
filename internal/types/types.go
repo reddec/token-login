@@ -2,14 +2,13 @@ package types
 
 import (
 	"crypto/rand"
+	"crypto/sha3"
 	"database/sql/driver"
 	"encoding/base32"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"golang.org/x/crypto/sha3"
 )
 
 const (

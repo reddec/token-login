@@ -8,14 +8,16 @@ import (
 	"time"
 
 	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/ent/token"
 	"github.com/reddec/token-login/internal/types"
 )
 
 type State map[types.KeyID]*Token
 
 type Token struct {
-	AccessKey *types.AccessKey
-	DBToken   *ent.Token
+	AccessKey   *types.AccessKey
+	DBToken     *ent.Token
+	ProjectSlug string
 }
 
 type Cache struct {
@@ -88,6 +90,16 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 		return fmt.Errorf("query all tokens: %w", err)
 	}
 
+	// Build project ID -> slug lookup
+	projects, err := v.client.Project.Query().All(ctx)
+	if err != nil {
+		return fmt.Errorf("query all projects: %w", err)
+	}
+	projectSlugs := make(map[int]string, len(projects))
+	for _, p := range projects {
+		projectSlugs[p.ID] = p.Slug
+	}
+
 	state := make(State, len(all))
 
 	for _, t := range all {
@@ -97,9 +109,15 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 			continue
 		}
 
+		projectSlug := ""
+		if t.ProjectID != 0 {
+			projectSlug = projectSlugs[t.ProjectID]
+		}
+
 		state[*t.KeyID] = &Token{
-			AccessKey: ak,
-			DBToken:   t,
+			AccessKey:   ak,
+			DBToken:     t,
+			ProjectSlug: projectSlug,
 		}
 	}
 
@@ -108,7 +126,7 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 }
 
 func (v *Cache) SyncKey(ctx context.Context, id int) error {
-	t, err := v.client.Token.Get(ctx, id)
+	t, err := v.client.Token.Query().WithProject().Where(token.ID(id)).Only(ctx)
 	if err != nil {
 		return fmt.Errorf("get token %v: %w", id, err)
 	}
@@ -118,9 +136,15 @@ func (v *Cache) SyncKey(ctx context.Context, id int) error {
 		return fmt.Errorf("create access key %v: %w", id, err)
 	}
 
+	projectSlug := ""
+	if t.Edges.Project != nil {
+		projectSlug = t.Edges.Project.Slug
+	}
+
 	v.Patch(*t.KeyID, &Token{
-		AccessKey: aKey,
-		DBToken:   t,
+		AccessKey:   aKey,
+		DBToken:     t,
+		ProjectSlug: projectSlug,
 	})
 	return nil
 }

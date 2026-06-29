@@ -1,11 +1,11 @@
 package types
 
 import (
+	"crypto/sha3"
 	"crypto/subtle"
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"golang.org/x/crypto/sha3"
 )
 
 func NewAccessKey(hash []byte, host, path string) (*AccessKey, error) {

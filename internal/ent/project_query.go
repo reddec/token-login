@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -16,53 +17,53 @@ import (
 	"github.com/reddec/token-login/internal/ent/token"
 )
 
-// TokenQuery is the builder for querying Token entities.
-type TokenQuery struct {
+// ProjectQuery is the builder for querying Project entities.
+type ProjectQuery struct {
 	config
-	ctx         *QueryContext
-	order       []token.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.Token
-	withProject *ProjectQuery
+	ctx        *QueryContext
+	order      []project.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Project
+	withTokens *TokenQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the TokenQuery builder.
-func (_q *TokenQuery) Where(ps ...predicate.Token) *TokenQuery {
+// Where adds a new predicate for the ProjectQuery builder.
+func (_q *ProjectQuery) Where(ps ...predicate.Project) *ProjectQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *TokenQuery) Limit(limit int) *TokenQuery {
+func (_q *ProjectQuery) Limit(limit int) *ProjectQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *TokenQuery) Offset(offset int) *TokenQuery {
+func (_q *ProjectQuery) Offset(offset int) *ProjectQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *TokenQuery) Unique(unique bool) *TokenQuery {
+func (_q *ProjectQuery) Unique(unique bool) *ProjectQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *TokenQuery) Order(o ...token.OrderOption) *TokenQuery {
+func (_q *ProjectQuery) Order(o ...project.OrderOption) *ProjectQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryProject chains the current query on the "project" edge.
-func (_q *TokenQuery) QueryProject() *ProjectQuery {
-	query := (&ProjectClient{config: _q.config}).Query()
+// QueryTokens chains the current query on the "tokens" edge.
+func (_q *ProjectQuery) QueryTokens() *TokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -72,9 +73,9 @@ func (_q *TokenQuery) QueryProject() *ProjectQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(token.Table, token.FieldID, selector),
-			sqlgraph.To(project.Table, project.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, token.ProjectTable, token.ProjectColumn),
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(token.Table, token.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.TokensTable, project.TokensColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -82,21 +83,21 @@ func (_q *TokenQuery) QueryProject() *ProjectQuery {
 	return query
 }
 
-// First returns the first Token entity from the query.
-// Returns a *NotFoundError when no Token was found.
-func (_q *TokenQuery) First(ctx context.Context) (*Token, error) {
+// First returns the first Project entity from the query.
+// Returns a *NotFoundError when no Project was found.
+func (_q *ProjectQuery) First(ctx context.Context) (*Project, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{token.Label}
+		return nil, &NotFoundError{project.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *TokenQuery) FirstX(ctx context.Context) *Token {
+func (_q *ProjectQuery) FirstX(ctx context.Context) *Project {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -104,22 +105,22 @@ func (_q *TokenQuery) FirstX(ctx context.Context) *Token {
 	return node
 }
 
-// FirstID returns the first Token ID from the query.
-// Returns a *NotFoundError when no Token ID was found.
-func (_q *TokenQuery) FirstID(ctx context.Context) (id int, err error) {
+// FirstID returns the first Project ID from the query.
+// Returns a *NotFoundError when no Project ID was found.
+func (_q *ProjectQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{token.Label}
+		err = &NotFoundError{project.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *TokenQuery) FirstIDX(ctx context.Context) int {
+func (_q *ProjectQuery) FirstIDX(ctx context.Context) int {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -127,10 +128,10 @@ func (_q *TokenQuery) FirstIDX(ctx context.Context) int {
 	return id
 }
 
-// Only returns a single Token entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one Token entity is found.
-// Returns a *NotFoundError when no Token entities are found.
-func (_q *TokenQuery) Only(ctx context.Context) (*Token, error) {
+// Only returns a single Project entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one Project entity is found.
+// Returns a *NotFoundError when no Project entities are found.
+func (_q *ProjectQuery) Only(ctx context.Context) (*Project, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -139,14 +140,14 @@ func (_q *TokenQuery) Only(ctx context.Context) (*Token, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{token.Label}
+		return nil, &NotFoundError{project.Label}
 	default:
-		return nil, &NotSingularError{token.Label}
+		return nil, &NotSingularError{project.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *TokenQuery) OnlyX(ctx context.Context) *Token {
+func (_q *ProjectQuery) OnlyX(ctx context.Context) *Project {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -154,10 +155,10 @@ func (_q *TokenQuery) OnlyX(ctx context.Context) *Token {
 	return node
 }
 
-// OnlyID is like Only, but returns the only Token ID in the query.
-// Returns a *NotSingularError when more than one Token ID is found.
+// OnlyID is like Only, but returns the only Project ID in the query.
+// Returns a *NotSingularError when more than one Project ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *TokenQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *ProjectQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -166,15 +167,15 @@ func (_q *TokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{token.Label}
+		err = &NotFoundError{project.Label}
 	default:
-		err = &NotSingularError{token.Label}
+		err = &NotSingularError{project.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *TokenQuery) OnlyIDX(ctx context.Context) int {
+func (_q *ProjectQuery) OnlyIDX(ctx context.Context) int {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -182,18 +183,18 @@ func (_q *TokenQuery) OnlyIDX(ctx context.Context) int {
 	return id
 }
 
-// All executes the query and returns a list of Tokens.
-func (_q *TokenQuery) All(ctx context.Context) ([]*Token, error) {
+// All executes the query and returns a list of Projects.
+func (_q *ProjectQuery) All(ctx context.Context) ([]*Project, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*Token, *TokenQuery]()
-	return withInterceptors[[]*Token](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*Project, *ProjectQuery]()
+	return withInterceptors[[]*Project](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *TokenQuery) AllX(ctx context.Context) []*Token {
+func (_q *ProjectQuery) AllX(ctx context.Context) []*Project {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -201,20 +202,20 @@ func (_q *TokenQuery) AllX(ctx context.Context) []*Token {
 	return nodes
 }
 
-// IDs executes the query and returns a list of Token IDs.
-func (_q *TokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+// IDs executes the query and returns a list of Project IDs.
+func (_q *ProjectQuery) IDs(ctx context.Context) (ids []int, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(token.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(project.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *TokenQuery) IDsX(ctx context.Context) []int {
+func (_q *ProjectQuery) IDsX(ctx context.Context) []int {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -223,16 +224,16 @@ func (_q *TokenQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (_q *TokenQuery) Count(ctx context.Context) (int, error) {
+func (_q *ProjectQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*TokenQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProjectQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *TokenQuery) CountX(ctx context.Context) int {
+func (_q *ProjectQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -241,7 +242,7 @@ func (_q *TokenQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *TokenQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *ProjectQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -254,7 +255,7 @@ func (_q *TokenQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *TokenQuery) ExistX(ctx context.Context) bool {
+func (_q *ProjectQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -262,33 +263,33 @@ func (_q *TokenQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the TokenQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the ProjectQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *TokenQuery) Clone() *TokenQuery {
+func (_q *ProjectQuery) Clone() *ProjectQuery {
 	if _q == nil {
 		return nil
 	}
-	return &TokenQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]token.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.Token{}, _q.predicates...),
-		withProject: _q.withProject.Clone(),
+	return &ProjectQuery{
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]project.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Project{}, _q.predicates...),
+		withTokens: _q.withTokens.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithProject tells the query-builder to eager-load the nodes that are connected to
-// the "project" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TokenQuery) WithProject(opts ...func(*ProjectQuery)) *TokenQuery {
-	query := (&ProjectClient{config: _q.config}).Query()
+// WithTokens tells the query-builder to eager-load the nodes that are connected to
+// the "tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProjectQuery) WithTokens(opts ...func(*TokenQuery)) *ProjectQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withProject = query
+	_q.withTokens = query
 	return _q
 }
 
@@ -302,15 +303,15 @@ func (_q *TokenQuery) WithProject(opts ...func(*ProjectQuery)) *TokenQuery {
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.Token.Query().
-//		GroupBy(token.FieldCreatedAt).
+//	client.Project.Query().
+//		GroupBy(project.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *TokenQuery) GroupBy(field string, fields ...string) *TokenGroupBy {
+func (_q *ProjectQuery) GroupBy(field string, fields ...string) *ProjectGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &TokenGroupBy{build: _q}
+	grbuild := &ProjectGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = token.Label
+	grbuild.label = project.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -324,23 +325,23 @@ func (_q *TokenQuery) GroupBy(field string, fields ...string) *TokenGroupBy {
 //		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
-//	client.Token.Query().
-//		Select(token.FieldCreatedAt).
+//	client.Project.Query().
+//		Select(project.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (_q *TokenQuery) Select(fields ...string) *TokenSelect {
+func (_q *ProjectQuery) Select(fields ...string) *ProjectSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &TokenSelect{TokenQuery: _q}
-	sbuild.label = token.Label
+	sbuild := &ProjectSelect{ProjectQuery: _q}
+	sbuild.label = project.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a TokenSelect configured with the given aggregations.
-func (_q *TokenQuery) Aggregate(fns ...AggregateFunc) *TokenSelect {
+// Aggregate returns a ProjectSelect configured with the given aggregations.
+func (_q *ProjectQuery) Aggregate(fns ...AggregateFunc) *ProjectSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *TokenQuery) prepareQuery(ctx context.Context) error {
+func (_q *ProjectQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -352,7 +353,7 @@ func (_q *TokenQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !token.ValidColumn(f) {
+		if !project.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -366,19 +367,19 @@ func (_q *TokenQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token, error) {
+func (_q *ProjectQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Project, error) {
 	var (
-		nodes       = []*Token{}
+		nodes       = []*Project{}
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			_q.withProject != nil,
+			_q.withTokens != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*Token).scanValues(nil, columns)
+		return (*Project).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &Token{config: _q.config}
+		node := &Project{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -392,46 +393,48 @@ func (_q *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withProject; query != nil {
-		if err := _q.loadProject(ctx, query, nodes, nil,
-			func(n *Token, e *Project) { n.Edges.Project = e }); err != nil {
+	if query := _q.withTokens; query != nil {
+		if err := _q.loadTokens(ctx, query, nodes,
+			func(n *Project) { n.Edges.Tokens = []*Token{} },
+			func(n *Project, e *Token) { n.Edges.Tokens = append(n.Edges.Tokens, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *TokenQuery) loadProject(ctx context.Context, query *ProjectQuery, nodes []*Token, init func(*Token), assign func(*Token, *Project)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*Token)
+func (_q *ProjectQuery) loadTokens(ctx context.Context, query *TokenQuery, nodes []*Project, init func(*Project), assign func(*Project, *Token)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Project)
 	for i := range nodes {
-		fk := nodes[i].ProjectID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
 		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(ids) == 0 {
-		return nil
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(token.FieldProjectID)
 	}
-	query.Where(project.IDIn(ids...))
+	query.Where(predicate.Token(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(project.TokensColumn), fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.ProjectID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "project_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "project_id" returned %v for node %v`, fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *TokenQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *ProjectQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -440,8 +443,8 @@ func (_q *TokenQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *TokenQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
+func (_q *ProjectQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(project.Table, project.Columns, sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -450,14 +453,11 @@ func (_q *TokenQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, token.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, project.FieldID)
 		for i := range fields {
-			if fields[i] != token.FieldID {
+			if fields[i] != project.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
-		}
-		if _q.withProject != nil {
-			_spec.Node.AddColumnOnce(token.FieldProjectID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
@@ -483,12 +483,12 @@ func (_q *TokenQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *TokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *ProjectQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(token.Table)
+	t1 := builder.Table(project.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = token.Columns
+		columns = project.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -515,28 +515,28 @@ func (_q *TokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// TokenGroupBy is the group-by builder for Token entities.
-type TokenGroupBy struct {
+// ProjectGroupBy is the group-by builder for Project entities.
+type ProjectGroupBy struct {
 	selector
-	build *TokenQuery
+	build *ProjectQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *TokenGroupBy) Aggregate(fns ...AggregateFunc) *TokenGroupBy {
+func (_g *ProjectGroupBy) Aggregate(fns ...AggregateFunc) *ProjectGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *TokenGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *ProjectGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*TokenQuery, *TokenGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*ProjectQuery, *ProjectGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *TokenGroupBy) sqlScan(ctx context.Context, root *TokenQuery, v any) error {
+func (_g *ProjectGroupBy) sqlScan(ctx context.Context, root *ProjectQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -563,28 +563,28 @@ func (_g *TokenGroupBy) sqlScan(ctx context.Context, root *TokenQuery, v any) er
 	return sql.ScanSlice(rows, v)
 }
 
-// TokenSelect is the builder for selecting fields of Token entities.
-type TokenSelect struct {
-	*TokenQuery
+// ProjectSelect is the builder for selecting fields of Project entities.
+type ProjectSelect struct {
+	*ProjectQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *TokenSelect) Aggregate(fns ...AggregateFunc) *TokenSelect {
+func (_s *ProjectSelect) Aggregate(fns ...AggregateFunc) *ProjectSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *TokenSelect) Scan(ctx context.Context, v any) error {
+func (_s *ProjectSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*TokenQuery, *TokenSelect](ctx, _s.TokenQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*ProjectQuery, *ProjectSelect](ctx, _s.ProjectQuery, _s, _s.inters, v)
 }
 
-func (_s *TokenSelect) sqlScan(ctx context.Context, root *TokenQuery, v any) error {
+func (_s *ProjectSelect) sqlScan(ctx context.Context, root *ProjectQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

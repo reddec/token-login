@@ -9,29 +9,29 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/reddec/token-login/internal/ent/predicate"
-	"github.com/reddec/token-login/internal/ent/token"
+	"github.com/reddec/token-login/internal/ent/project"
 )
 
-// TokenDelete is the builder for deleting a Token entity.
-type TokenDelete struct {
+// ProjectDelete is the builder for deleting a Project entity.
+type ProjectDelete struct {
 	config
 	hooks    []Hook
-	mutation *TokenMutation
+	mutation *ProjectMutation
 }
 
-// Where appends a list predicates to the TokenDelete builder.
-func (_d *TokenDelete) Where(ps ...predicate.Token) *TokenDelete {
+// Where appends a list predicates to the ProjectDelete builder.
+func (_d *ProjectDelete) Where(ps ...predicate.Project) *ProjectDelete {
 	_d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (_d *TokenDelete) Exec(ctx context.Context) (int, error) {
+func (_d *ProjectDelete) Exec(ctx context.Context) (int, error) {
 	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *TokenDelete) ExecX(ctx context.Context) int {
+func (_d *ProjectDelete) ExecX(ctx context.Context) int {
 	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
@@ -39,8 +39,8 @@ func (_d *TokenDelete) ExecX(ctx context.Context) int {
 	return n
 }
 
-func (_d *TokenDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(token.Table, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
+func (_d *ProjectDelete) sqlExec(ctx context.Context) (int, error) {
+	_spec := sqlgraph.NewDeleteSpec(project.Table, sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt))
 	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -56,32 +56,32 @@ func (_d *TokenDelete) sqlExec(ctx context.Context) (int, error) {
 	return affected, err
 }
 
-// TokenDeleteOne is the builder for deleting a single Token entity.
-type TokenDeleteOne struct {
-	_d *TokenDelete
+// ProjectDeleteOne is the builder for deleting a single Project entity.
+type ProjectDeleteOne struct {
+	_d *ProjectDelete
 }
 
-// Where appends a list predicates to the TokenDelete builder.
-func (_d *TokenDeleteOne) Where(ps ...predicate.Token) *TokenDeleteOne {
+// Where appends a list predicates to the ProjectDelete builder.
+func (_d *ProjectDeleteOne) Where(ps ...predicate.Project) *ProjectDeleteOne {
 	_d._d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query.
-func (_d *TokenDeleteOne) Exec(ctx context.Context) error {
+func (_d *ProjectDeleteOne) Exec(ctx context.Context) error {
 	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
 	case n == 0:
-		return &NotFoundError{token.Label}
+		return &NotFoundError{project.Label}
 	default:
 		return nil
 	}
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *TokenDeleteOne) ExecX(ctx context.Context) {
+func (_d *ProjectDeleteOne) ExecX(ctx context.Context) {
 	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}

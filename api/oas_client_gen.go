@@ -4,69 +4,95 @@ package api
 
 import (
 	"context"
+	"io"
 	"net/url"
 	"strings"
 
 	"github.com/go-faster/errors"
-
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/uri"
 )
 
+func trimTrailingSlashes(u *url.URL) {
+	u.Path = strings.TrimRight(u.Path, "/")
+	u.RawPath = strings.TrimRight(u.RawPath, "/")
+}
+
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
+	// CreateProject invokes createProject operation.
+	//
+	// Create new project.
+	//
+	// POST /projects
+	CreateProject(ctx context.Context, request *ProjectConfig) (*Project, error)
 	// CreateToken invokes createToken operation.
 	//
 	// Create new token for user.
 	//
 	// POST /tokens
-	CreateToken(ctx context.Context, request *Config) (*Credential, error)
+	CreateToken(ctx context.Context, request *TokenConfig) (*Credential, error)
+	// DeleteProject invokes deleteProject operation.
+	//
+	// Delete project.
+	//
+	// DELETE /projects/{project}
+	DeleteProject(ctx context.Context, params DeleteProjectParams) error
 	// DeleteToken invokes deleteToken operation.
 	//
 	// Delete token for user.
 	//
 	// DELETE /tokens/{token}
 	DeleteToken(ctx context.Context, params DeleteTokenParams) error
+	// GetProject invokes getProject operation.
+	//
+	// Get project by ID.
+	//
+	// GET /projects/{project}
+	GetProject(ctx context.Context, params GetProjectParams) (*Project, error)
 	// GetToken invokes getToken operation.
 	//
 	// Get tokens by ID and for the current user.
 	//
 	// GET /tokens/{token}
 	GetToken(ctx context.Context, params GetTokenParams) (*Token, error)
+	// ListProjects invokes listProjects operation.
+	//
+	// List all projects.
+	//
+	// GET /projects
+	ListProjects(ctx context.Context) ([]Project, error)
 	// ListTokens invokes listTokens operation.
 	//
 	// List all tokens for user.
 	//
 	// GET /tokens
-	ListTokens(ctx context.Context) ([]Token, error)
+	ListTokens(ctx context.Context, params ListTokensParams) ([]Token, error)
 	// RefreshToken invokes refreshToken operation.
 	//
 	// Regenerate token key.
 	//
 	// POST /tokens/{token}
 	RefreshToken(ctx context.Context, params RefreshTokenParams) (*Credential, error)
+	// UpdateProject invokes updateProject operation.
+	//
+	// Update project. Supports partial update.
+	//
+	// PATCH /projects/{project}
+	UpdateProject(ctx context.Context, request *ProjectPatch, params UpdateProjectParams) error
 	// UpdateToken invokes updateToken operation.
 	//
 	// Update token for user. Supports partial update.
 	//
 	// PATCH /tokens/{token}
-	UpdateToken(ctx context.Context, request *Config, params UpdateTokenParams) error
+	UpdateToken(ctx context.Context, request *TokenPatch, params UpdateTokenParams) error
 }
 
 // Client implements OAS client.
 type Client struct {
 	serverURL *url.URL
 	baseClient
-}
-
-var _ Handler = struct {
-	*Client
-}{}
-
-func trimTrailingSlashes(u *url.URL) {
-	u.Path = strings.TrimRight(u.Path, "/")
-	u.RawPath = strings.TrimRight(u.RawPath, "/")
 }
 
 // NewClient initializes new Client defined by OAS.
@@ -102,17 +128,63 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 	return u
 }
 
+// CreateProject invokes createProject operation.
+//
+// Create new project.
+//
+// POST /projects
+func (c *Client) CreateProject(ctx context.Context, request *ProjectConfig) (*Project, error) {
+	res, err := c.sendCreateProject(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateProject(ctx context.Context, request *ProjectConfig) (res *Project, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/projects"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateProjectRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeCreateProjectResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CreateToken invokes createToken operation.
 //
 // Create new token for user.
 //
 // POST /tokens
-func (c *Client) CreateToken(ctx context.Context, request *Config) (*Credential, error) {
+func (c *Client) CreateToken(ctx context.Context, request *TokenConfig) (*Credential, error) {
 	res, err := c.sendCreateToken(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendCreateToken(ctx context.Context, request *Config) (res *Credential, err error) {
+func (c *Client) sendCreateToken(ctx context.Context, request *TokenConfig) (res *Credential, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
@@ -131,9 +203,77 @@ func (c *Client) sendCreateToken(ctx context.Context, request *Config) (res *Cre
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeCreateTokenResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteProject invokes deleteProject operation.
+//
+// Delete project.
+//
+// DELETE /projects/{project}
+func (c *Client) DeleteProject(ctx context.Context, params DeleteProjectParams) error {
+	_, err := c.sendDeleteProject(ctx, params)
+	return err
+}
+
+func (c *Client) sendDeleteProject(ctx context.Context, params DeleteProjectParams) (res *DeleteProjectNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/projects/"
+	{
+		// Encode "project" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "project",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.Project))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeDeleteProjectResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -185,9 +325,77 @@ func (c *Client) sendDeleteToken(ctx context.Context, params DeleteTokenParams) 
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeDeleteTokenResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetProject invokes getProject operation.
+//
+// Get project by ID.
+//
+// GET /projects/{project}
+func (c *Client) GetProject(ctx context.Context, params GetProjectParams) (*Project, error) {
+	res, err := c.sendGetProject(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetProject(ctx context.Context, params GetProjectParams) (res *Project, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/projects/"
+	{
+		// Encode "project" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "project",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.Project))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeGetProjectResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -239,9 +447,59 @@ func (c *Client) sendGetToken(ctx context.Context, params GetTokenParams) (res *
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeGetTokenResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListProjects invokes listProjects operation.
+//
+// List all projects.
+//
+// GET /projects
+func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
+	res, err := c.sendListProjects(ctx)
+	return res, err
+}
+
+func (c *Client) sendListProjects(ctx context.Context) (res []Project, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/projects"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeListProjectsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -254,17 +512,37 @@ func (c *Client) sendGetToken(ctx context.Context, params GetTokenParams) (res *
 // List all tokens for user.
 //
 // GET /tokens
-func (c *Client) ListTokens(ctx context.Context) ([]Token, error) {
-	res, err := c.sendListTokens(ctx)
+func (c *Client) ListTokens(ctx context.Context, params ListTokensParams) ([]Token, error) {
+	res, err := c.sendListTokens(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendListTokens(ctx context.Context) (res []Token, err error) {
+func (c *Client) sendListTokens(ctx context.Context, params ListTokensParams) (res []Token, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
 	pathParts[0] = "/tokens"
 	uri.AddPathParts(u, pathParts[:]...)
+
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "project" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "project",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Project.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
 
 	r, err := ht.NewRequest(ctx, "GET", u)
 	if err != nil {
@@ -275,7 +553,14 @@ func (c *Client) sendListTokens(ctx context.Context) (res []Token, err error) {
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeListTokensResponse(resp)
 	if err != nil {
@@ -329,9 +614,80 @@ func (c *Client) sendRefreshToken(ctx context.Context, params RefreshTokenParams
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeRefreshTokenResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateProject invokes updateProject operation.
+//
+// Update project. Supports partial update.
+//
+// PATCH /projects/{project}
+func (c *Client) UpdateProject(ctx context.Context, request *ProjectPatch, params UpdateProjectParams) error {
+	_, err := c.sendUpdateProject(ctx, request, params)
+	return err
+}
+
+func (c *Client) sendUpdateProject(ctx context.Context, request *ProjectPatch, params UpdateProjectParams) (res *UpdateProjectNoContent, err error) {
+
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/projects/"
+	{
+		// Encode "project" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "project",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.Project))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateProjectRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	result, err := decodeUpdateProjectResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -344,12 +700,12 @@ func (c *Client) sendRefreshToken(ctx context.Context, params RefreshTokenParams
 // Update token for user. Supports partial update.
 //
 // PATCH /tokens/{token}
-func (c *Client) UpdateToken(ctx context.Context, request *Config, params UpdateTokenParams) error {
+func (c *Client) UpdateToken(ctx context.Context, request *TokenPatch, params UpdateTokenParams) error {
 	_, err := c.sendUpdateToken(ctx, request, params)
 	return err
 }
 
-func (c *Client) sendUpdateToken(ctx context.Context, request *Config, params UpdateTokenParams) (res *UpdateTokenNoContent, err error) {
+func (c *Client) sendUpdateToken(ctx context.Context, request *TokenPatch, params UpdateTokenParams) (res *UpdateTokenNoContent, err error) {
 
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
@@ -386,7 +742,14 @@ func (c *Client) sendUpdateToken(ctx context.Context, request *Config, params Up
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	defer resp.Body.Close()
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	result, err := decodeUpdateTokenResponse(resp)
 	if err != nil {

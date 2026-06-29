@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 
@@ -33,6 +34,7 @@ func (Token) Fields() []ent.Field {
 		field.String("path").Default("/**"),
 		field.String("host").Default(""),
 		field.JSON("headers", types.Headers{}).Optional(),
+		field.Int("project_id").Optional(),
 		field.Int64("requests").Default(0),
 		field.Time("last_access_at").Default(time.Now),
 	}
@@ -40,7 +42,9 @@ func (Token) Fields() []ent.Field {
 
 // Edges of the Token.
 func (Token) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("project", Project.Type).Ref("tokens").Field("project_id").Unique(),
+	}
 }
 
 func (Token) Indexes() []ent.Index {

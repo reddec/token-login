@@ -9,6 +9,19 @@ import (
 	"github.com/go-faster/jx"
 )
 
+func encodeCreateProjectResponse(response *Project, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeCreateTokenResponse(response *Credential, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
@@ -22,8 +35,27 @@ func encodeCreateTokenResponse(response *Credential, w http.ResponseWriter) erro
 	return nil
 }
 
+func encodeDeleteProjectResponse(response *DeleteProjectNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
+
+	return nil
+}
+
 func encodeDeleteTokenResponse(response *DeleteTokenNoContent, w http.ResponseWriter) error {
 	w.WriteHeader(204)
+
+	return nil
+}
+
+func encodeGetProjectResponse(response *Project, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
 
 	return nil
 }
@@ -34,6 +66,23 @@ func encodeGetTokenResponse(response *Token, w http.ResponseWriter) error {
 
 	e := new(jx.Encoder)
 	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
+func encodeListProjectsResponse(response []Project, w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+
+	e := new(jx.Encoder)
+	e.ArrStart()
+	for _, elem := range response {
+		elem.Encode(e)
+	}
+	e.ArrEnd()
 	if _, err := e.WriteTo(w); err != nil {
 		return errors.Wrap(err, "write")
 	}
@@ -67,6 +116,12 @@ func encodeRefreshTokenResponse(response *Credential, w http.ResponseWriter) err
 	if _, err := e.WriteTo(w); err != nil {
 		return errors.Wrap(err, "write")
 	}
+
+	return nil
+}
+
+func encodeUpdateProjectResponse(response *UpdateProjectNoContent, w http.ResponseWriter) error {
+	w.WriteHeader(204)
 
 	return nil
 }

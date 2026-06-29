@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/reddec/token-login/internal/ent/predicate"
+	"github.com/reddec/token-login/internal/ent/project"
 	"github.com/reddec/token-login/internal/ent/token"
 	"github.com/reddec/token-login/internal/types"
 )
@@ -25,166 +26,197 @@ type TokenUpdate struct {
 }
 
 // Where appends a list predicates to the TokenUpdate builder.
-func (tu *TokenUpdate) Where(ps ...predicate.Token) *TokenUpdate {
-	tu.mutation.Where(ps...)
-	return tu
+func (_u *TokenUpdate) Where(ps ...predicate.Token) *TokenUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (tu *TokenUpdate) SetCreatedAt(t time.Time) *TokenUpdate {
-	tu.mutation.SetCreatedAt(t)
-	return tu
+func (_u *TokenUpdate) SetCreatedAt(v time.Time) *TokenUpdate {
+	_u.mutation.SetCreatedAt(v)
+	return _u
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableCreatedAt(t *time.Time) *TokenUpdate {
-	if t != nil {
-		tu.SetCreatedAt(*t)
+func (_u *TokenUpdate) SetNillableCreatedAt(v *time.Time) *TokenUpdate {
+	if v != nil {
+		_u.SetCreatedAt(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (tu *TokenUpdate) SetUpdatedAt(t time.Time) *TokenUpdate {
-	tu.mutation.SetUpdatedAt(t)
-	return tu
+func (_u *TokenUpdate) SetUpdatedAt(v time.Time) *TokenUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetKeyID sets the "key_id" field.
-func (tu *TokenUpdate) SetKeyID(ti *types.KeyID) *TokenUpdate {
-	tu.mutation.SetKeyID(ti)
-	return tu
+func (_u *TokenUpdate) SetKeyID(v *types.KeyID) *TokenUpdate {
+	_u.mutation.SetKeyID(v)
+	return _u
 }
 
 // SetHash sets the "hash" field.
-func (tu *TokenUpdate) SetHash(b []byte) *TokenUpdate {
-	tu.mutation.SetHash(b)
-	return tu
+func (_u *TokenUpdate) SetHash(v []byte) *TokenUpdate {
+	_u.mutation.SetHash(v)
+	return _u
 }
 
 // SetUser sets the "user" field.
-func (tu *TokenUpdate) SetUser(s string) *TokenUpdate {
-	tu.mutation.SetUser(s)
-	return tu
+func (_u *TokenUpdate) SetUser(v string) *TokenUpdate {
+	_u.mutation.SetUser(v)
+	return _u
 }
 
 // SetNillableUser sets the "user" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableUser(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetUser(*s)
+func (_u *TokenUpdate) SetNillableUser(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetUser(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetLabel sets the "label" field.
-func (tu *TokenUpdate) SetLabel(s string) *TokenUpdate {
-	tu.mutation.SetLabel(s)
-	return tu
+func (_u *TokenUpdate) SetLabel(v string) *TokenUpdate {
+	_u.mutation.SetLabel(v)
+	return _u
 }
 
 // SetNillableLabel sets the "label" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableLabel(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetLabel(*s)
+func (_u *TokenUpdate) SetNillableLabel(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetLabel(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetPath sets the "path" field.
-func (tu *TokenUpdate) SetPath(s string) *TokenUpdate {
-	tu.mutation.SetPath(s)
-	return tu
+func (_u *TokenUpdate) SetPath(v string) *TokenUpdate {
+	_u.mutation.SetPath(v)
+	return _u
 }
 
 // SetNillablePath sets the "path" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillablePath(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetPath(*s)
+func (_u *TokenUpdate) SetNillablePath(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetPath(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetHost sets the "host" field.
-func (tu *TokenUpdate) SetHost(s string) *TokenUpdate {
-	tu.mutation.SetHost(s)
-	return tu
+func (_u *TokenUpdate) SetHost(v string) *TokenUpdate {
+	_u.mutation.SetHost(v)
+	return _u
 }
 
 // SetNillableHost sets the "host" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableHost(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetHost(*s)
+func (_u *TokenUpdate) SetNillableHost(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetHost(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetHeaders sets the "headers" field.
-func (tu *TokenUpdate) SetHeaders(t types.Headers) *TokenUpdate {
-	tu.mutation.SetHeaders(t)
-	return tu
+func (_u *TokenUpdate) SetHeaders(v types.Headers) *TokenUpdate {
+	_u.mutation.SetHeaders(v)
+	return _u
 }
 
-// AppendHeaders appends t to the "headers" field.
-func (tu *TokenUpdate) AppendHeaders(t types.Headers) *TokenUpdate {
-	tu.mutation.AppendHeaders(t)
-	return tu
+// AppendHeaders appends value to the "headers" field.
+func (_u *TokenUpdate) AppendHeaders(v types.Headers) *TokenUpdate {
+	_u.mutation.AppendHeaders(v)
+	return _u
 }
 
 // ClearHeaders clears the value of the "headers" field.
-func (tu *TokenUpdate) ClearHeaders() *TokenUpdate {
-	tu.mutation.ClearHeaders()
-	return tu
+func (_u *TokenUpdate) ClearHeaders() *TokenUpdate {
+	_u.mutation.ClearHeaders()
+	return _u
+}
+
+// SetProjectID sets the "project_id" field.
+func (_u *TokenUpdate) SetProjectID(v int) *TokenUpdate {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *TokenUpdate) SetNillableProjectID(v *int) *TokenUpdate {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *TokenUpdate) ClearProjectID() *TokenUpdate {
+	_u.mutation.ClearProjectID()
+	return _u
 }
 
 // SetRequests sets the "requests" field.
-func (tu *TokenUpdate) SetRequests(i int64) *TokenUpdate {
-	tu.mutation.ResetRequests()
-	tu.mutation.SetRequests(i)
-	return tu
+func (_u *TokenUpdate) SetRequests(v int64) *TokenUpdate {
+	_u.mutation.ResetRequests()
+	_u.mutation.SetRequests(v)
+	return _u
 }
 
 // SetNillableRequests sets the "requests" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableRequests(i *int64) *TokenUpdate {
-	if i != nil {
-		tu.SetRequests(*i)
+func (_u *TokenUpdate) SetNillableRequests(v *int64) *TokenUpdate {
+	if v != nil {
+		_u.SetRequests(*v)
 	}
-	return tu
+	return _u
 }
 
-// AddRequests adds i to the "requests" field.
-func (tu *TokenUpdate) AddRequests(i int64) *TokenUpdate {
-	tu.mutation.AddRequests(i)
-	return tu
+// AddRequests adds value to the "requests" field.
+func (_u *TokenUpdate) AddRequests(v int64) *TokenUpdate {
+	_u.mutation.AddRequests(v)
+	return _u
 }
 
 // SetLastAccessAt sets the "last_access_at" field.
-func (tu *TokenUpdate) SetLastAccessAt(t time.Time) *TokenUpdate {
-	tu.mutation.SetLastAccessAt(t)
-	return tu
+func (_u *TokenUpdate) SetLastAccessAt(v time.Time) *TokenUpdate {
+	_u.mutation.SetLastAccessAt(v)
+	return _u
 }
 
 // SetNillableLastAccessAt sets the "last_access_at" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableLastAccessAt(t *time.Time) *TokenUpdate {
-	if t != nil {
-		tu.SetLastAccessAt(*t)
+func (_u *TokenUpdate) SetNillableLastAccessAt(v *time.Time) *TokenUpdate {
+	if v != nil {
+		_u.SetLastAccessAt(*v)
 	}
-	return tu
+	return _u
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (_u *TokenUpdate) SetProject(v *Project) *TokenUpdate {
+	return _u.SetProjectID(v.ID)
 }
 
 // Mutation returns the TokenMutation object of the builder.
-func (tu *TokenUpdate) Mutation() *TokenMutation {
-	return tu.mutation
+func (_u *TokenUpdate) Mutation() *TokenMutation {
+	return _u.mutation
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *TokenUpdate) ClearProject() *TokenUpdate {
+	_u.mutation.ClearProject()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (tu *TokenUpdate) Save(ctx context.Context) (int, error) {
-	tu.defaults()
-	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
+func (_u *TokenUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tu *TokenUpdate) SaveX(ctx context.Context) int {
-	affected, err := tu.Save(ctx)
+func (_u *TokenUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -192,29 +224,29 @@ func (tu *TokenUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (tu *TokenUpdate) Exec(ctx context.Context) error {
-	_, err := tu.Save(ctx)
+func (_u *TokenUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tu *TokenUpdate) ExecX(ctx context.Context) {
-	if err := tu.Exec(ctx); err != nil {
+func (_u *TokenUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tu *TokenUpdate) defaults() {
-	if _, ok := tu.mutation.UpdatedAt(); !ok {
+func (_u *TokenUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := token.UpdateDefaultUpdatedAt()
-		tu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tu *TokenUpdate) check() error {
-	if v, ok := tu.mutation.Hash(); ok {
+func (_u *TokenUpdate) check() error {
+	if v, ok := _u.mutation.Hash(); ok {
 		if err := token.HashValidator(v); err != nil {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Token.hash": %w`, err)}
 		}
@@ -222,67 +254,96 @@ func (tu *TokenUpdate) check() error {
 	return nil
 }
 
-func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := tu.check(); err != nil {
-		return n, err
+func (_u *TokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
-	if ps := tu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tu.mutation.CreatedAt(); ok {
+	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 	}
-	if value, ok := tu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(token.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := tu.mutation.KeyID(); ok {
+	if value, ok := _u.mutation.KeyID(); ok {
 		vv, err := token.ValueScanner.KeyID.Value(value)
 		if err != nil {
 			return 0, err
 		}
 		_spec.SetField(token.FieldKeyID, field.TypeString, vv)
 	}
-	if value, ok := tu.mutation.Hash(); ok {
+	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(token.FieldHash, field.TypeBytes, value)
 	}
-	if value, ok := tu.mutation.User(); ok {
+	if value, ok := _u.mutation.User(); ok {
 		_spec.SetField(token.FieldUser, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.Label(); ok {
+	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(token.FieldLabel, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.Path(); ok {
+	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(token.FieldPath, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.Host(); ok {
+	if value, ok := _u.mutation.Host(); ok {
 		_spec.SetField(token.FieldHost, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.Headers(); ok {
+	if value, ok := _u.mutation.Headers(); ok {
 		_spec.SetField(token.FieldHeaders, field.TypeJSON, value)
 	}
-	if value, ok := tu.mutation.AppendedHeaders(); ok {
+	if value, ok := _u.mutation.AppendedHeaders(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, token.FieldHeaders, value)
 		})
 	}
-	if tu.mutation.HeadersCleared() {
+	if _u.mutation.HeadersCleared() {
 		_spec.ClearField(token.FieldHeaders, field.TypeJSON)
 	}
-	if value, ok := tu.mutation.Requests(); ok {
+	if value, ok := _u.mutation.Requests(); ok {
 		_spec.SetField(token.FieldRequests, field.TypeInt64, value)
 	}
-	if value, ok := tu.mutation.AddedRequests(); ok {
+	if value, ok := _u.mutation.AddedRequests(); ok {
 		_spec.AddField(token.FieldRequests, field.TypeInt64, value)
 	}
-	if value, ok := tu.mutation.LastAccessAt(); ok {
+	if value, ok := _u.mutation.LastAccessAt(); ok {
 		_spec.SetField(token.FieldLastAccessAt, field.TypeTime, value)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
+	if _u.mutation.ProjectCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   token.ProjectTable,
+			Columns: []string{token.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   token.ProjectTable,
+			Columns: []string{token.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{token.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -290,8 +351,8 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	tu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // TokenUpdateOne is the builder for updating a single Token entity.
@@ -303,173 +364,204 @@ type TokenUpdateOne struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (tuo *TokenUpdateOne) SetCreatedAt(t time.Time) *TokenUpdateOne {
-	tuo.mutation.SetCreatedAt(t)
-	return tuo
+func (_u *TokenUpdateOne) SetCreatedAt(v time.Time) *TokenUpdateOne {
+	_u.mutation.SetCreatedAt(v)
+	return _u
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableCreatedAt(t *time.Time) *TokenUpdateOne {
-	if t != nil {
-		tuo.SetCreatedAt(*t)
+func (_u *TokenUpdateOne) SetNillableCreatedAt(v *time.Time) *TokenUpdateOne {
+	if v != nil {
+		_u.SetCreatedAt(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (tuo *TokenUpdateOne) SetUpdatedAt(t time.Time) *TokenUpdateOne {
-	tuo.mutation.SetUpdatedAt(t)
-	return tuo
+func (_u *TokenUpdateOne) SetUpdatedAt(v time.Time) *TokenUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetKeyID sets the "key_id" field.
-func (tuo *TokenUpdateOne) SetKeyID(ti *types.KeyID) *TokenUpdateOne {
-	tuo.mutation.SetKeyID(ti)
-	return tuo
+func (_u *TokenUpdateOne) SetKeyID(v *types.KeyID) *TokenUpdateOne {
+	_u.mutation.SetKeyID(v)
+	return _u
 }
 
 // SetHash sets the "hash" field.
-func (tuo *TokenUpdateOne) SetHash(b []byte) *TokenUpdateOne {
-	tuo.mutation.SetHash(b)
-	return tuo
+func (_u *TokenUpdateOne) SetHash(v []byte) *TokenUpdateOne {
+	_u.mutation.SetHash(v)
+	return _u
 }
 
 // SetUser sets the "user" field.
-func (tuo *TokenUpdateOne) SetUser(s string) *TokenUpdateOne {
-	tuo.mutation.SetUser(s)
-	return tuo
+func (_u *TokenUpdateOne) SetUser(v string) *TokenUpdateOne {
+	_u.mutation.SetUser(v)
+	return _u
 }
 
 // SetNillableUser sets the "user" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableUser(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetUser(*s)
+func (_u *TokenUpdateOne) SetNillableUser(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetUser(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetLabel sets the "label" field.
-func (tuo *TokenUpdateOne) SetLabel(s string) *TokenUpdateOne {
-	tuo.mutation.SetLabel(s)
-	return tuo
+func (_u *TokenUpdateOne) SetLabel(v string) *TokenUpdateOne {
+	_u.mutation.SetLabel(v)
+	return _u
 }
 
 // SetNillableLabel sets the "label" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableLabel(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetLabel(*s)
+func (_u *TokenUpdateOne) SetNillableLabel(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetLabel(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetPath sets the "path" field.
-func (tuo *TokenUpdateOne) SetPath(s string) *TokenUpdateOne {
-	tuo.mutation.SetPath(s)
-	return tuo
+func (_u *TokenUpdateOne) SetPath(v string) *TokenUpdateOne {
+	_u.mutation.SetPath(v)
+	return _u
 }
 
 // SetNillablePath sets the "path" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillablePath(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetPath(*s)
+func (_u *TokenUpdateOne) SetNillablePath(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetPath(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetHost sets the "host" field.
-func (tuo *TokenUpdateOne) SetHost(s string) *TokenUpdateOne {
-	tuo.mutation.SetHost(s)
-	return tuo
+func (_u *TokenUpdateOne) SetHost(v string) *TokenUpdateOne {
+	_u.mutation.SetHost(v)
+	return _u
 }
 
 // SetNillableHost sets the "host" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableHost(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetHost(*s)
+func (_u *TokenUpdateOne) SetNillableHost(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetHost(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetHeaders sets the "headers" field.
-func (tuo *TokenUpdateOne) SetHeaders(t types.Headers) *TokenUpdateOne {
-	tuo.mutation.SetHeaders(t)
-	return tuo
+func (_u *TokenUpdateOne) SetHeaders(v types.Headers) *TokenUpdateOne {
+	_u.mutation.SetHeaders(v)
+	return _u
 }
 
-// AppendHeaders appends t to the "headers" field.
-func (tuo *TokenUpdateOne) AppendHeaders(t types.Headers) *TokenUpdateOne {
-	tuo.mutation.AppendHeaders(t)
-	return tuo
+// AppendHeaders appends value to the "headers" field.
+func (_u *TokenUpdateOne) AppendHeaders(v types.Headers) *TokenUpdateOne {
+	_u.mutation.AppendHeaders(v)
+	return _u
 }
 
 // ClearHeaders clears the value of the "headers" field.
-func (tuo *TokenUpdateOne) ClearHeaders() *TokenUpdateOne {
-	tuo.mutation.ClearHeaders()
-	return tuo
+func (_u *TokenUpdateOne) ClearHeaders() *TokenUpdateOne {
+	_u.mutation.ClearHeaders()
+	return _u
+}
+
+// SetProjectID sets the "project_id" field.
+func (_u *TokenUpdateOne) SetProjectID(v int) *TokenUpdateOne {
+	_u.mutation.SetProjectID(v)
+	return _u
+}
+
+// SetNillableProjectID sets the "project_id" field if the given value is not nil.
+func (_u *TokenUpdateOne) SetNillableProjectID(v *int) *TokenUpdateOne {
+	if v != nil {
+		_u.SetProjectID(*v)
+	}
+	return _u
+}
+
+// ClearProjectID clears the value of the "project_id" field.
+func (_u *TokenUpdateOne) ClearProjectID() *TokenUpdateOne {
+	_u.mutation.ClearProjectID()
+	return _u
 }
 
 // SetRequests sets the "requests" field.
-func (tuo *TokenUpdateOne) SetRequests(i int64) *TokenUpdateOne {
-	tuo.mutation.ResetRequests()
-	tuo.mutation.SetRequests(i)
-	return tuo
+func (_u *TokenUpdateOne) SetRequests(v int64) *TokenUpdateOne {
+	_u.mutation.ResetRequests()
+	_u.mutation.SetRequests(v)
+	return _u
 }
 
 // SetNillableRequests sets the "requests" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableRequests(i *int64) *TokenUpdateOne {
-	if i != nil {
-		tuo.SetRequests(*i)
+func (_u *TokenUpdateOne) SetNillableRequests(v *int64) *TokenUpdateOne {
+	if v != nil {
+		_u.SetRequests(*v)
 	}
-	return tuo
+	return _u
 }
 
-// AddRequests adds i to the "requests" field.
-func (tuo *TokenUpdateOne) AddRequests(i int64) *TokenUpdateOne {
-	tuo.mutation.AddRequests(i)
-	return tuo
+// AddRequests adds value to the "requests" field.
+func (_u *TokenUpdateOne) AddRequests(v int64) *TokenUpdateOne {
+	_u.mutation.AddRequests(v)
+	return _u
 }
 
 // SetLastAccessAt sets the "last_access_at" field.
-func (tuo *TokenUpdateOne) SetLastAccessAt(t time.Time) *TokenUpdateOne {
-	tuo.mutation.SetLastAccessAt(t)
-	return tuo
+func (_u *TokenUpdateOne) SetLastAccessAt(v time.Time) *TokenUpdateOne {
+	_u.mutation.SetLastAccessAt(v)
+	return _u
 }
 
 // SetNillableLastAccessAt sets the "last_access_at" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableLastAccessAt(t *time.Time) *TokenUpdateOne {
-	if t != nil {
-		tuo.SetLastAccessAt(*t)
+func (_u *TokenUpdateOne) SetNillableLastAccessAt(v *time.Time) *TokenUpdateOne {
+	if v != nil {
+		_u.SetLastAccessAt(*v)
 	}
-	return tuo
+	return _u
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (_u *TokenUpdateOne) SetProject(v *Project) *TokenUpdateOne {
+	return _u.SetProjectID(v.ID)
 }
 
 // Mutation returns the TokenMutation object of the builder.
-func (tuo *TokenUpdateOne) Mutation() *TokenMutation {
-	return tuo.mutation
+func (_u *TokenUpdateOne) Mutation() *TokenMutation {
+	return _u.mutation
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (_u *TokenUpdateOne) ClearProject() *TokenUpdateOne {
+	_u.mutation.ClearProject()
+	return _u
 }
 
 // Where appends a list predicates to the TokenUpdate builder.
-func (tuo *TokenUpdateOne) Where(ps ...predicate.Token) *TokenUpdateOne {
-	tuo.mutation.Where(ps...)
-	return tuo
+func (_u *TokenUpdateOne) Where(ps ...predicate.Token) *TokenUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (tuo *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOne {
-	tuo.fields = append([]string{field}, fields...)
-	return tuo
+func (_u *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated Token entity.
-func (tuo *TokenUpdateOne) Save(ctx context.Context) (*Token, error) {
-	tuo.defaults()
-	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+func (_u *TokenUpdateOne) Save(ctx context.Context) (*Token, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tuo *TokenUpdateOne) SaveX(ctx context.Context) *Token {
-	node, err := tuo.Save(ctx)
+func (_u *TokenUpdateOne) SaveX(ctx context.Context) *Token {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -477,29 +569,29 @@ func (tuo *TokenUpdateOne) SaveX(ctx context.Context) *Token {
 }
 
 // Exec executes the query on the entity.
-func (tuo *TokenUpdateOne) Exec(ctx context.Context) error {
-	_, err := tuo.Save(ctx)
+func (_u *TokenUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tuo *TokenUpdateOne) ExecX(ctx context.Context) {
-	if err := tuo.Exec(ctx); err != nil {
+func (_u *TokenUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tuo *TokenUpdateOne) defaults() {
-	if _, ok := tuo.mutation.UpdatedAt(); !ok {
+func (_u *TokenUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := token.UpdateDefaultUpdatedAt()
-		tuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tuo *TokenUpdateOne) check() error {
-	if v, ok := tuo.mutation.Hash(); ok {
+func (_u *TokenUpdateOne) check() error {
+	if v, ok := _u.mutation.Hash(); ok {
 		if err := token.HashValidator(v); err != nil {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Token.hash": %w`, err)}
 		}
@@ -507,17 +599,17 @@ func (tuo *TokenUpdateOne) check() error {
 	return nil
 }
 
-func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error) {
-	if err := tuo.check(); err != nil {
+func (_u *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
-	id, ok := tuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Token.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := tuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, token.FieldID)
 		for _, f := range fields {
@@ -529,65 +621,94 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 			}
 		}
 	}
-	if ps := tuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tuo.mutation.CreatedAt(); ok {
+	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 	}
-	if value, ok := tuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(token.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := tuo.mutation.KeyID(); ok {
+	if value, ok := _u.mutation.KeyID(); ok {
 		vv, err := token.ValueScanner.KeyID.Value(value)
 		if err != nil {
 			return nil, err
 		}
 		_spec.SetField(token.FieldKeyID, field.TypeString, vv)
 	}
-	if value, ok := tuo.mutation.Hash(); ok {
+	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(token.FieldHash, field.TypeBytes, value)
 	}
-	if value, ok := tuo.mutation.User(); ok {
+	if value, ok := _u.mutation.User(); ok {
 		_spec.SetField(token.FieldUser, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.Label(); ok {
+	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(token.FieldLabel, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.Path(); ok {
+	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(token.FieldPath, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.Host(); ok {
+	if value, ok := _u.mutation.Host(); ok {
 		_spec.SetField(token.FieldHost, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.Headers(); ok {
+	if value, ok := _u.mutation.Headers(); ok {
 		_spec.SetField(token.FieldHeaders, field.TypeJSON, value)
 	}
-	if value, ok := tuo.mutation.AppendedHeaders(); ok {
+	if value, ok := _u.mutation.AppendedHeaders(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, token.FieldHeaders, value)
 		})
 	}
-	if tuo.mutation.HeadersCleared() {
+	if _u.mutation.HeadersCleared() {
 		_spec.ClearField(token.FieldHeaders, field.TypeJSON)
 	}
-	if value, ok := tuo.mutation.Requests(); ok {
+	if value, ok := _u.mutation.Requests(); ok {
 		_spec.SetField(token.FieldRequests, field.TypeInt64, value)
 	}
-	if value, ok := tuo.mutation.AddedRequests(); ok {
+	if value, ok := _u.mutation.AddedRequests(); ok {
 		_spec.AddField(token.FieldRequests, field.TypeInt64, value)
 	}
-	if value, ok := tuo.mutation.LastAccessAt(); ok {
+	if value, ok := _u.mutation.LastAccessAt(); ok {
 		_spec.SetField(token.FieldLastAccessAt, field.TypeTime, value)
 	}
-	_node = &Token{config: tuo.config}
+	if _u.mutation.ProjectCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   token.ProjectTable,
+			Columns: []string{token.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   token.ProjectTable,
+			Columns: []string{token.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(project.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	_node = &Token{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, tuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{token.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -595,6 +716,6 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		return nil, err
 	}
-	tuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

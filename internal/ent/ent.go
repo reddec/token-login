@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/reddec/token-login/internal/ent/project"
 	"github.com/reddec/token-login/internal/ent/token"
 )
 
@@ -69,14 +70,15 @@ var (
 	columnCheck sql.ColumnCheck
 )
 
-// columnChecker checks if the column exists in the given table.
-func checkColumn(table, column string) error {
+// checkColumn checks if the column exists in the given table.
+func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			token.Table: token.ValidColumn,
+			project.Table: project.ValidColumn,
+			token.Table:   token.ValidColumn,
 		})
 	})
-	return columnCheck(table, column)
+	return columnCheck(t, c)
 }
 
 // Asc applies the given fields in ASC order.

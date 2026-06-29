@@ -6,58 +6,6 @@ import (
 	"time"
 )
 
-// Ref: #/components/schemas/Config
-type Config struct {
-	// Custom token description.
-	Label OptString `json:"label"`
-	// Allowed hosts. Supports globs. Empty means "allow all".
-	Host OptString `json:"host"`
-	// Allowed path. Supports globs. Empty means "allow all".
-	Path OptString `json:"path"`
-	// Custom headers which will be added after successfull authorization.
-	Headers []NameValue `json:"headers"`
-}
-
-// GetLabel returns the value of Label.
-func (s *Config) GetLabel() OptString {
-	return s.Label
-}
-
-// GetHost returns the value of Host.
-func (s *Config) GetHost() OptString {
-	return s.Host
-}
-
-// GetPath returns the value of Path.
-func (s *Config) GetPath() OptString {
-	return s.Path
-}
-
-// GetHeaders returns the value of Headers.
-func (s *Config) GetHeaders() []NameValue {
-	return s.Headers
-}
-
-// SetLabel sets the value of Label.
-func (s *Config) SetLabel(val OptString) {
-	s.Label = val
-}
-
-// SetHost sets the value of Host.
-func (s *Config) SetHost(val OptString) {
-	s.Host = val
-}
-
-// SetPath sets the value of Path.
-func (s *Config) SetPath(val OptString) {
-	s.Path = val
-}
-
-// SetHeaders sets the value of Headers.
-func (s *Config) SetHeaders(val []NameValue) {
-	s.Headers = val
-}
-
 // Ref: #/components/schemas/Credential
 type Credential struct {
 	// Token ID.
@@ -85,6 +33,9 @@ func (s *Credential) SetID(val int) {
 func (s *Credential) SetKey(val string) {
 	s.Key = val
 }
+
+// DeleteProjectNoContent is response for DeleteProject operation.
+type DeleteProjectNoContent struct{}
 
 // DeleteTokenNoContent is response for DeleteToken operation.
 type DeleteTokenNoContent struct{}
@@ -161,6 +112,52 @@ func (o OptDateTime) Or(d time.Time) time.Time {
 	return d
 }
 
+// NewOptInt returns new OptInt with value set to v.
+func NewOptInt(v int) OptInt {
+	return OptInt{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInt is optional int.
+type OptInt struct {
+	Value int
+	Set   bool
+}
+
+// IsSet returns true if OptInt was set.
+func (o OptInt) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt) Reset() {
+	var v int
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt) SetTo(v int) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt) Get() (v int, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -207,6 +204,114 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
+// Ref: #/components/schemas/Project
+type Project struct {
+	// Unique project ID.
+	ID int `json:"id"`
+	// Time when project was created.
+	CreatedAt time.Time `json:"createdAt"`
+	// Time when project was last updated.
+	UpdatedAt time.Time `json:"updatedAt"`
+	// Unique project slug (path and query friendly).
+	Slug string `json:"slug"`
+	// Project description.
+	Description string `json:"description"`
+}
+
+// GetID returns the value of ID.
+func (s *Project) GetID() int {
+	return s.ID
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *Project) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *Project) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetSlug returns the value of Slug.
+func (s *Project) GetSlug() string {
+	return s.Slug
+}
+
+// GetDescription returns the value of Description.
+func (s *Project) GetDescription() string {
+	return s.Description
+}
+
+// SetID sets the value of ID.
+func (s *Project) SetID(val int) {
+	s.ID = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *Project) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *Project) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *Project) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Project) SetDescription(val string) {
+	s.Description = val
+}
+
+// Ref: #/components/schemas/ProjectConfig
+type ProjectConfig struct {
+	// Unique project slug (path and query friendly).
+	Slug string `json:"slug"`
+	// Project description.
+	Description OptString `json:"description"`
+}
+
+// GetSlug returns the value of Slug.
+func (s *ProjectConfig) GetSlug() string {
+	return s.Slug
+}
+
+// GetDescription returns the value of Description.
+func (s *ProjectConfig) GetDescription() OptString {
+	return s.Description
+}
+
+// SetSlug sets the value of Slug.
+func (s *ProjectConfig) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetDescription sets the value of Description.
+func (s *ProjectConfig) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// Ref: #/components/schemas/ProjectPatch
+type ProjectPatch struct {
+	// Project description.
+	Description OptString `json:"description"`
+}
+
+// GetDescription returns the value of Description.
+func (s *ProjectPatch) GetDescription() OptString {
+	return s.Description
+}
+
+// SetDescription sets the value of Description.
+func (s *ProjectPatch) SetDescription(val OptString) {
+	s.Description = val
+}
+
 // Ref: #/components/schemas/Token
 type Token struct {
 	// Unique token ID.
@@ -227,6 +332,10 @@ type Token struct {
 	Host string `json:"host"`
 	// Allowed path. Supports globs. Empty means "allow all".
 	Path string `json:"path"`
+	// ID of the project this token belongs to.
+	ProjectId int `json:"projectId"`
+	// Slug of the project this token belongs to.
+	ProjectSlug string `json:"projectSlug"`
 	// Custom headers which will be added after successfull authorization.
 	Headers []NameValue `json:"headers"`
 	// Tentative number of requests used this token.
@@ -276,6 +385,16 @@ func (s *Token) GetHost() string {
 // GetPath returns the value of Path.
 func (s *Token) GetPath() string {
 	return s.Path
+}
+
+// GetProjectId returns the value of ProjectId.
+func (s *Token) GetProjectId() int {
+	return s.ProjectId
+}
+
+// GetProjectSlug returns the value of ProjectSlug.
+func (s *Token) GetProjectSlug() string {
+	return s.ProjectSlug
 }
 
 // GetHeaders returns the value of Headers.
@@ -333,6 +452,16 @@ func (s *Token) SetPath(val string) {
 	s.Path = val
 }
 
+// SetProjectId sets the value of ProjectId.
+func (s *Token) SetProjectId(val int) {
+	s.ProjectId = val
+}
+
+// SetProjectSlug sets the value of ProjectSlug.
+func (s *Token) SetProjectSlug(val string) {
+	s.ProjectSlug = val
+}
+
 // SetHeaders sets the value of Headers.
 func (s *Token) SetHeaders(val []NameValue) {
 	s.Headers = val
@@ -342,6 +471,125 @@ func (s *Token) SetHeaders(val []NameValue) {
 func (s *Token) SetRequests(val int64) {
 	s.Requests = val
 }
+
+// Ref: #/components/schemas/TokenConfig
+type TokenConfig struct {
+	// Custom token description.
+	Label OptString `json:"label"`
+	// Allowed hosts. Supports globs. Empty means "allow all".
+	Host OptString `json:"host"`
+	// Allowed path. Supports globs. Empty means "allow all".
+	Path OptString `json:"path"`
+	// Custom headers which will be added after successfull authorization.
+	Headers []NameValue `json:"headers"`
+	// Project ID this token belongs to.
+	ProjectId int `json:"projectId"`
+}
+
+// GetLabel returns the value of Label.
+func (s *TokenConfig) GetLabel() OptString {
+	return s.Label
+}
+
+// GetHost returns the value of Host.
+func (s *TokenConfig) GetHost() OptString {
+	return s.Host
+}
+
+// GetPath returns the value of Path.
+func (s *TokenConfig) GetPath() OptString {
+	return s.Path
+}
+
+// GetHeaders returns the value of Headers.
+func (s *TokenConfig) GetHeaders() []NameValue {
+	return s.Headers
+}
+
+// GetProjectId returns the value of ProjectId.
+func (s *TokenConfig) GetProjectId() int {
+	return s.ProjectId
+}
+
+// SetLabel sets the value of Label.
+func (s *TokenConfig) SetLabel(val OptString) {
+	s.Label = val
+}
+
+// SetHost sets the value of Host.
+func (s *TokenConfig) SetHost(val OptString) {
+	s.Host = val
+}
+
+// SetPath sets the value of Path.
+func (s *TokenConfig) SetPath(val OptString) {
+	s.Path = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *TokenConfig) SetHeaders(val []NameValue) {
+	s.Headers = val
+}
+
+// SetProjectId sets the value of ProjectId.
+func (s *TokenConfig) SetProjectId(val int) {
+	s.ProjectId = val
+}
+
+// Ref: #/components/schemas/TokenPatch
+type TokenPatch struct {
+	// Custom token description.
+	Label OptString `json:"label"`
+	// Allowed hosts. Supports globs. Empty means "allow all".
+	Host OptString `json:"host"`
+	// Allowed path. Supports globs. Empty means "allow all".
+	Path OptString `json:"path"`
+	// Custom headers which will be added after successfull authorization.
+	Headers []NameValue `json:"headers"`
+}
+
+// GetLabel returns the value of Label.
+func (s *TokenPatch) GetLabel() OptString {
+	return s.Label
+}
+
+// GetHost returns the value of Host.
+func (s *TokenPatch) GetHost() OptString {
+	return s.Host
+}
+
+// GetPath returns the value of Path.
+func (s *TokenPatch) GetPath() OptString {
+	return s.Path
+}
+
+// GetHeaders returns the value of Headers.
+func (s *TokenPatch) GetHeaders() []NameValue {
+	return s.Headers
+}
+
+// SetLabel sets the value of Label.
+func (s *TokenPatch) SetLabel(val OptString) {
+	s.Label = val
+}
+
+// SetHost sets the value of Host.
+func (s *TokenPatch) SetHost(val OptString) {
+	s.Host = val
+}
+
+// SetPath sets the value of Path.
+func (s *TokenPatch) SetPath(val OptString) {
+	s.Path = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *TokenPatch) SetHeaders(val []NameValue) {
+	s.Headers = val
+}
+
+// UpdateProjectNoContent is response for UpdateProject operation.
+type UpdateProjectNoContent struct{}
 
 // UpdateTokenNoContent is response for UpdateToken operation.
 type UpdateTokenNoContent struct{}

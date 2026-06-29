@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/reddec/token-login/internal/types"
 )
@@ -33,12 +34,23 @@ const (
 	FieldHost = "host"
 	// FieldHeaders holds the string denoting the headers field in the database.
 	FieldHeaders = "headers"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
 	// FieldRequests holds the string denoting the requests field in the database.
 	FieldRequests = "requests"
 	// FieldLastAccessAt holds the string denoting the last_access_at field in the database.
 	FieldLastAccessAt = "last_access_at"
+	// EdgeProject holds the string denoting the project edge name in mutations.
+	EdgeProject = "project"
 	// Table holds the table name of the token in the database.
 	Table = "token"
+	// ProjectTable is the table that holds the project relation/edge.
+	ProjectTable = "token"
+	// ProjectInverseTable is the table name for the Project entity.
+	// It exists in this package in order to avoid circular dependency with the "project" package.
+	ProjectInverseTable = "project"
+	// ProjectColumn is the table column denoting the project relation/edge.
+	ProjectColumn = "project_id"
 )
 
 // Columns holds all SQL columns for token fields.
@@ -53,6 +65,7 @@ var Columns = []string{
 	FieldPath,
 	FieldHost,
 	FieldHeaders,
+	FieldProjectID,
 	FieldRequests,
 	FieldLastAccessAt,
 }
@@ -135,6 +148,11 @@ func ByHost(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHost, opts...).ToFunc()
 }
 
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
+}
+
 // ByRequests orders the results by the requests field.
 func ByRequests(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequests, opts...).ToFunc()
@@ -143,4 +161,18 @@ func ByRequests(opts ...sql.OrderTermOption) OrderOption {
 // ByLastAccessAt orders the results by the last_access_at field.
 func ByLastAccessAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastAccessAt, opts...).ToFunc()
+}
+
+// ByProjectField orders the results by project field.
+func ByProjectField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProjectStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newProjectStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProjectInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
+	)
 }

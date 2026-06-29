@@ -9,6 +9,28 @@ import (
 )
 
 var (
+	// ProjectColumns holds the columns for the "project" table.
+	ProjectColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true, SchemaType: map[string]string{"postgres": "bigserial"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user", Type: field.TypeString, Default: ""},
+		{Name: "slug", Type: field.TypeString, Size: 255},
+		{Name: "description", Type: field.TypeString, Default: ""},
+	}
+	// ProjectTable holds the schema information for the "project" table.
+	ProjectTable = &schema.Table{
+		Name:       "project",
+		Columns:    ProjectColumns,
+		PrimaryKey: []*schema.Column{ProjectColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "project_user_slug",
+				Unique:  true,
+				Columns: []*schema.Column{ProjectColumns[3], ProjectColumns[4]},
+			},
+		},
+	}
 	// TokenColumns holds the columns for the "token" table.
 	TokenColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true, SchemaType: map[string]string{"postgres": "bigserial"}},
@@ -23,12 +45,21 @@ var (
 		{Name: "headers", Type: field.TypeJSON, Nullable: true},
 		{Name: "requests", Type: field.TypeInt64, Default: 0},
 		{Name: "last_access_at", Type: field.TypeTime},
+		{Name: "project_id", Type: field.TypeInt, Nullable: true, SchemaType: map[string]string{"postgres": "bigserial"}},
 	}
 	// TokenTable holds the schema information for the "token" table.
 	TokenTable = &schema.Table{
 		Name:       "token",
 		Columns:    TokenColumns,
 		PrimaryKey: []*schema.Column{TokenColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "token_project_tokens",
+				Columns:    []*schema.Column{TokenColumns[12]},
+				RefColumns: []*schema.Column{ProjectColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "token_user",
@@ -44,11 +75,16 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ProjectTable,
 		TokenTable,
 	}
 )
 
 func init() {
+	ProjectTable.Annotation = &entsql.Annotation{
+		Table: "project",
+	}
+	TokenTable.ForeignKeys[0].RefTable = ProjectTable
 	TokenTable.Annotation = &entsql.Annotation{
 		Table: "token",
 	}

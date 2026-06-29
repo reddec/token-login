@@ -5,16 +5,56 @@ package ent
 import (
 	"time"
 
-	"entgo.io/ent/schema/field"
+	"github.com/reddec/token-login/internal/ent/project"
 	"github.com/reddec/token-login/internal/ent/schema"
 	"github.com/reddec/token-login/internal/ent/token"
 	"github.com/reddec/token-login/internal/types"
+
+	"entgo.io/ent/schema/field"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	projectFields := schema.Project{}.Fields()
+	_ = projectFields
+	// projectDescCreatedAt is the schema descriptor for created_at field.
+	projectDescCreatedAt := projectFields[1].Descriptor()
+	// project.DefaultCreatedAt holds the default value on creation for the created_at field.
+	project.DefaultCreatedAt = projectDescCreatedAt.Default.(func() time.Time)
+	// projectDescUpdatedAt is the schema descriptor for updated_at field.
+	projectDescUpdatedAt := projectFields[2].Descriptor()
+	// project.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	project.DefaultUpdatedAt = projectDescUpdatedAt.Default.(func() time.Time)
+	// project.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	project.UpdateDefaultUpdatedAt = projectDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// projectDescUser is the schema descriptor for user field.
+	projectDescUser := projectFields[3].Descriptor()
+	// project.DefaultUser holds the default value on creation for the user field.
+	project.DefaultUser = projectDescUser.Default.(string)
+	// projectDescSlug is the schema descriptor for slug field.
+	projectDescSlug := projectFields[4].Descriptor()
+	// project.SlugValidator is a validator for the "slug" field. It is called by the builders before save.
+	project.SlugValidator = func() func(string) error {
+		validators := projectDescSlug.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(slug string) error {
+			for _, fn := range fns {
+				if err := fn(slug); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// projectDescDescription is the schema descriptor for description field.
+	projectDescDescription := projectFields[5].Descriptor()
+	// project.DefaultDescription holds the default value on creation for the description field.
+	project.DefaultDescription = projectDescDescription.Default.(string)
 	tokenFields := schema.Token{}.Fields()
 	_ = tokenFields
 	// tokenDescCreatedAt is the schema descriptor for created_at field.
@@ -47,11 +87,11 @@ func init() {
 	// token.DefaultHost holds the default value on creation for the host field.
 	token.DefaultHost = tokenDescHost.Default.(string)
 	// tokenDescRequests is the schema descriptor for requests field.
-	tokenDescRequests := tokenFields[10].Descriptor()
+	tokenDescRequests := tokenFields[11].Descriptor()
 	// token.DefaultRequests holds the default value on creation for the requests field.
 	token.DefaultRequests = tokenDescRequests.Default.(int64)
 	// tokenDescLastAccessAt is the schema descriptor for last_access_at field.
-	tokenDescLastAccessAt := tokenFields[11].Descriptor()
+	tokenDescLastAccessAt := tokenFields[12].Descriptor()
 	// token.DefaultLastAccessAt holds the default value on creation for the last_access_at field.
 	token.DefaultLastAccessAt = tokenDescLastAccessAt.Default.(func() time.Time)
 }
