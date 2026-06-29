@@ -4,11 +4,20 @@ run:
   tests: false
 
 linters:
-  enable-all: true
+  default: all
   disable:
-  - errcheck
-
+    - errcheck
   exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
     rules:
       - linters:
           - govet
@@ -25,3 +34,16 @@ linters:
           - recvcheck
         path: internal/types/types.go
         text: "KeyID"
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
