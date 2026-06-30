@@ -11,6 +11,13 @@ import (
 	"github.com/reddec/token-login/internal/utils"
 )
 
+var (
+	errProjectNotFound     = errors.New("project not found")
+	errUnknownToken        = errors.New("unknown token")
+	errUnknownProject      = errors.New("unknown project")
+	errCannotDeleteDefault = errors.New("cannot delete default project")
+)
+
 type (
 	UpdateHandler func(id int)
 	RemoveHandler func(id int)
@@ -55,7 +62,7 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 			return nil, fmt.Errorf("check project: %w", err)
 		}
 		if !exists {
-			return nil, fmt.Errorf("project %d not found", req.ProjectId)
+			return nil, fmt.Errorf("project %d not found: %w", req.ProjectId, errProjectNotFound)
 		}
 	}
 
@@ -126,7 +133,7 @@ func (srv *Server) RefreshToken(ctx context.Context, params api.RefreshTokenPara
 		return nil, fmt.Errorf("update token: %w", err)
 	}
 	if changed == 0 {
-		return nil, errors.New("unknown token")
+		return nil, errUnknownToken
 	}
 	srv.notifyUpdated(params.Token)
 	return &api.Credential{
@@ -159,7 +166,7 @@ func (srv *Server) UpdateToken(ctx context.Context, req *api.TokenPatch, params 
 		return fmt.Errorf("update token: %w", err)
 	}
 	if changed == 0 {
-		return errors.New("unknown token")
+		return errUnknownToken
 	}
 	srv.notifyUpdated(params.Token)
 	return nil
@@ -219,7 +226,7 @@ func (srv *Server) UpdateProject(ctx context.Context, req *api.ProjectPatch, par
 		return fmt.Errorf("update project: %w", err)
 	}
 	if changed == 0 {
-		return errors.New("unknown project")
+		return errUnknownProject
 	}
 	return nil
 }
@@ -231,7 +238,7 @@ func (srv *Server) DeleteProject(ctx context.Context, params api.DeleteProjectPa
 		return fmt.Errorf("get project: %w", err)
 	}
 	if p.Slug == "" {
-		return errors.New("cannot delete default project")
+		return errCannotDeleteDefault
 	}
 
 	tokenIDs, err := srv.store.DeleteProject(ctx, user, int64(params.Project))

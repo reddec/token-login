@@ -16,7 +16,7 @@ func SyncStats(ctx context.Context, store dbo.Store, statsCh <-chan web.Hit, agg
 
 	var done bool
 
-	var stats = make(map[int64]dbo.StatsEntry)
+	stats := make(map[int64]dbo.StatsEntry)
 	for !done {
 		select {
 		case <-ctx.Done():
@@ -26,12 +26,12 @@ func SyncStats(ctx context.Context, store dbo.Store, statsCh <-chan web.Hit, agg
 				done = true
 				break
 			}
-			old := stats[int64(hit.ID)]
+			old := stats[hit.ID]
 			if hit.Time.After(old.Last) {
 				old.Last = hit.Time
 			}
 			old.Hits++
-			stats[int64(hit.ID)] = old
+			stats[hit.ID] = old
 		case <-ticker.C:
 		}
 

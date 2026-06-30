@@ -20,7 +20,10 @@ func NewStore(db *sql.DB) dbo.Store {
 }
 
 func (s *store) Close() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("close db: %w", err)
+	}
+	return nil
 }
 
 func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
@@ -238,7 +241,10 @@ func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry)
 			return fmt.Errorf("update stats for %d: %w", id, err)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+	return nil
 }
 
 func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Project, error) {
@@ -268,4 +274,3 @@ func mapToken(row TokenView) *dbo.Token {
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
 	}
 }
-

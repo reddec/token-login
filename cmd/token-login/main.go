@@ -22,8 +22,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/cache"
 	"github.com/reddec/token-login/internal/dbo/open"
@@ -31,8 +29,8 @@ import (
 	"github.com/reddec/token-login/internal/redisstore"
 	"github.com/reddec/token-login/internal/server"
 	"github.com/reddec/token-login/internal/utils"
-
 	"github.com/reddec/token-login/web"
+	"golang.org/x/crypto/bcrypt"
 )
 
 //nolint:gochecknoglobals
@@ -41,6 +39,9 @@ var (
 	commit  = "none"
 	date    = "unknown"
 	builtBy = "unknown"
+
+	errCALoadFailed    = errors.New("CA certs failed to load")
+	errEmailNotAllowed = errors.New("email not allowed")
 )
 
 type Config struct {
@@ -297,7 +298,7 @@ func (srv *Server) tlsConfig() (*tls.Config, error) {
 	}
 
 	// enable mTLS if needed
-	var clientAuth = tls.NoClientCert
+	clientAuth := tls.NoClientCert
 	if srv.Mutual {
 		clientAuth = tls.RequireAndVerifyClientCert
 	}
@@ -313,7 +314,6 @@ func (srv *Server) tlsConfig() (*tls.Config, error) {
 
 func (srv *Server) loadCA(ca *x509.CertPool) error {
 	caCert, err := os.ReadFile(srv.CA)
-
 	if err != nil {
 		if srv.IgnoreSystemCA {
 			// no system, no custom
@@ -325,7 +325,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 
 	if !ca.AppendCertsFromPEM(caCert) {
 		if srv.IgnoreSystemCA {
-			return errors.New("CA certs failed to load")
+			return errCALoadFailed
 		}
 		slog.Warn("failed add custom CA to pool")
 	}
@@ -362,7 +362,7 @@ func (cfg Config) setupLogging() {
 }
 
 func (cfg *OIDC) emailsFilter() map[string]bool {
-	var ans = make(map[string]bool, len(cfg.Emails))
+	ans := make(map[string]bool, len(cfg.Emails))
 	for _, e := range cfg.Emails {
 		ans[strings.ToLower(e)] = true
 	}
@@ -408,7 +408,7 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 				return fmt.Errorf("read claims: %w", err)
 			}
 			if !filter[strings.ToLower(claims.Email)] {
-				return fmt.Errorf("email %s not allowed", claims.Email)
+				return fmt.Errorf("email %s not allowed: %w", claims.Email, errEmailNotAllowed)
 			}
 			return nil
 		},

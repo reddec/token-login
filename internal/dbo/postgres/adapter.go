@@ -39,6 +39,7 @@ func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.
 	}
 	return s.GetTokenByID(ctx, id)
 }
+
 func (s *store) GetToken(ctx context.Context, user string, id int64) (*dbo.Token, error) {
 	row, err := s.q.GetToken(ctx, GetTokenParams{User: user, ID: id})
 	if err != nil {
@@ -251,7 +252,10 @@ func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry)
 			return fmt.Errorf("update stats for %d: %w", id, err)
 		}
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+	return nil
 }
 
 func mapToken(row TokenView) *dbo.Token {
@@ -263,4 +267,3 @@ func mapToken(row TokenView) *dbo.Token {
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
 	}
 }
-

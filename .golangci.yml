@@ -16,6 +16,16 @@ linters:
     - gocognit
     - depguard
     - cyclop
+    - exhaustruct
+    - tagliatelle
+    - varnamelen
+    - funcorder
+    - ireturn
+    - interfacebloat
+    - goconst
+    - funlen
+    - nonamedreturns
+    - mnd
   exclusions:
     generated: lax
     presets:
@@ -43,6 +53,10 @@ linters:
           - recvcheck
         path: internal/types/types.go
         text: "KeyID"
+      - linters:
+          - recvcheck
+        path: internal/types/types.go
+        text: "Headers"
 
 formatters:
   enable:

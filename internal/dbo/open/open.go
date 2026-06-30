@@ -5,21 +5,23 @@ package open
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
 	"time"
 
-	sqlmigrate "github.com/rubenv/sql-migrate"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	_ "modernc.org/sqlite"
-
+	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver for database/sql
 	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/dbo/postgres"
 	"github.com/reddec/token-login/internal/dbo/sqlite"
+	sqlmigrate "github.com/rubenv/sql-migrate"
+	_ "modernc.org/sqlite" // SQLite driver for database/sql
 )
+
+var errUnsupportedScheme = errors.New("unsupported database scheme")
 
 // Open opens a database connection based on the URL scheme, runs pending
 // migrations, and returns a Store implementation.
@@ -38,7 +40,7 @@ func Open(ctx context.Context, rawURL string, hook func(db *sql.DB)) (dbo.Store,
 	case "postgres":
 		return openPostgres(ctx, u, hook)
 	default:
-		return nil, fmt.Errorf("unsupported database scheme: %s", u.Scheme)
+		return nil, fmt.Errorf("unsupported database scheme %s: %w", u.Scheme, errUnsupportedScheme)
 	}
 }
 
@@ -65,10 +67,7 @@ func openSQLite(ctx context.Context, u *url.URL, rawURL string, hook func(db *sq
 	}
 
 	if inMemory {
-		if err := seedMigrationsIfNeeded(ctx, db, "sqlite3"); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("seed migrations: %w", err)
-		}
+		seedMigrationsIfNeeded(ctx, db, "sqlite3")
 		n, err := sqlmigrate.Exec(db, "sqlite3", source, sqlmigrate.Up)
 		if err != nil {
 			db.Close()
@@ -84,10 +83,7 @@ func openSQLite(ctx context.Context, u *url.URL, rawURL string, hook func(db *sq
 		return sqlite.NewStore(db), nil
 	}
 
-	if err := seedMigrationsIfNeeded(ctx, db, "sqlite3"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("seed migrations: %w", err)
-	}
+	seedMigrationsIfNeeded(ctx, db, "sqlite3")
 	n, err := sqlmigrate.Exec(db, "sqlite3", source, sqlmigrate.Up)
 	if err != nil {
 		db.Close()
@@ -130,9 +126,7 @@ func openPostgres(ctx context.Context, u *url.URL, hook func(db *sql.DB)) (dbo.S
 		Root:       "migrations",
 	}
 
-	if err := seedMigrationsIfNeeded(ctx, migrateDB, "postgres"); err != nil {
-		return nil, fmt.Errorf("seed migrations: %w", err)
-	}
+	seedMigrationsIfNeeded(ctx, migrateDB, "postgres")
 
 	n, err := sqlmigrate.Exec(migrateDB, "postgres", source, sqlmigrate.Up)
 	if err != nil {
@@ -150,7 +144,7 @@ func openPostgres(ctx context.Context, u *url.URL, hook func(db *sql.DB)) (dbo.S
 	return postgres.NewStore(pool), nil
 }
 
-func seedMigrationsIfNeeded(ctx context.Context, db *sql.DB, driver string) error {
+func seedMigrationsIfNeeded(ctx context.Context, db *sql.DB, driver string) {
 	var hasGorp bool
 	switch driver {
 	case "sqlite3":
@@ -163,7 +157,7 @@ func seedMigrationsIfNeeded(ctx context.Context, db *sql.DB, driver string) erro
 		).Scan(&hasGorp)
 	}
 	if hasGorp {
-		return nil
+		return
 	}
 
 	var hasToken bool
@@ -178,7 +172,7 @@ func seedMigrationsIfNeeded(ctx context.Context, db *sql.DB, driver string) erro
 		).Scan(&hasToken)
 	}
 	if !hasToken {
-		return nil
+		return
 	}
 
 	slog.Info("detected legacy database, seeding migration table")
@@ -194,5 +188,4 @@ func seedMigrationsIfNeeded(ctx context.Context, db *sql.DB, driver string) erro
 		db.ExecContext(ctx, "INSERT INTO gorp_migrations (id, applied_at) VALUES ($1, $2)", id, now)
 	}
 	slog.Info("seeded migration table for legacy database")
-	return nil
 }
