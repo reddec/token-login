@@ -26,25 +26,23 @@ linters:
     - funlen
     - nonamedreturns
     - mnd
+    - revive
   exclusions:
     generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
     paths:
       - third_party$
       - builtin$
       - examples$
+      - node_modules$
     rules:
-      - linters:
-          - govet
-        text: "inline:"
       - linters:
           - gosec
         path: internal/utils/utils.go
         text: "G124"
+      - linters:
+          - gosec
+        path: internal/dbo/open/open.go
+        text: "G104"
       - linters:
           - contextcheck
         path: cmd/token-login/main.go
@@ -70,3 +68,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - node_modules$

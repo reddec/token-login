@@ -71,7 +71,6 @@ type Config struct {
 	} `group:"Debug" namespace:"debug" env-namespace:"DEBUG"`
 }
 
-//nolint:maligned
 type Server struct {
 	Bind              string        `long:"bind" env:"BIND" description:"Bind address"`
 	TLS               bool          `long:"tls" env:"TLS" description:"Enable TLS"`
