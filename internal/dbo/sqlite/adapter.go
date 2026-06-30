@@ -27,10 +27,6 @@ func (s *store) Close() error {
 
 
 func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
-	var projectID *int64
-	if p.ProjectID != 0 {
-		projectID = &p.ProjectID
-	}
 	row, err := s.q.CreateToken(ctx, CreateTokenParams{
 		KeyID:     p.KeyID.String(),
 		Hash:      p.Hash,
@@ -39,7 +35,7 @@ func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.
 		Path:      p.Path,
 		Host:      p.Host,
 		Headers:   marshalHeaders(p.Headers),
-		ProjectID: projectID,
+		ProjectID: p.ProjectID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create token: %w", err)
@@ -67,10 +63,9 @@ func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) 
 
 func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([]*dbo.Token, error) {
 	if projectID != 0 {
-		pid := projectID
 		rows, err := s.q.ListTokensByUserAndProject(ctx, ListTokensByUserAndProjectParams{
 			User:      user,
-			ProjectID: &pid,
+			ProjectID: projectID,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("list tokens by project: %w", err)
@@ -187,8 +182,7 @@ func (s *store) UpdateProject(ctx context.Context, p dbo.UpdateProjectParams) (i
 }
 
 func (s *store) DeleteProject(ctx context.Context, user string, id int64) ([]int64, error) {
-	pid := id
-	tokenIDs, err := s.q.ListTokenIDsByProject(ctx, &pid)
+	tokenIDs, err := s.q.ListTokenIDsByProject(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("list token ids: %w", err)
 	}
@@ -277,15 +271,11 @@ func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Pro
 
 func tokenViewToDomain(row TokenView) *dbo.Token {
 	kid, _ := parseKeyID(row.KeyID)
-	var pid int64
-	if row.ProjectID != nil {
-		pid = *row.ProjectID
-	}
 	return &dbo.Token{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		KeyID: kid, Hash: row.Hash, User: row.User, Label: row.Label,
 		Path: row.Path, Host: row.Host, Headers: unmarshalHeaders(row.Headers),
-		ProjectID: pid, ProjectSlug: row.ProjectSlug,
+		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
 	}
 }
@@ -293,19 +283,15 @@ func tokenViewToDomain(row TokenView) *dbo.Token {
 func tokenToDomain(
 	id int64, createdAt, updatedAt time.Time, keyID string, hash []byte,
 	user, label, path, host string, headers json.RawMessage,
-	projectID *int64, requests int64, lastAccessAt time.Time,
+	projectID int64, requests int64, lastAccessAt time.Time,
 	projectSlug string,
 ) *dbo.Token {
 	kid, _ := parseKeyID(keyID)
-	var pid int64
-	if projectID != nil {
-		pid = *projectID
-	}
 	return &dbo.Token{
 		ID: id, CreatedAt: createdAt, UpdatedAt: updatedAt,
 		KeyID: kid, Hash: hash, User: user, Label: label,
 		Path: path, Host: host, Headers: unmarshalHeaders(headers),
-		ProjectID: pid, ProjectSlug: projectSlug,
+		ProjectID: projectID, ProjectSlug: projectSlug,
 		Requests: requests, LastAccessAt: lastAccessAt,
 	}
 }

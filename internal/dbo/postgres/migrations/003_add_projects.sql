@@ -23,6 +23,8 @@ ALTER TABLE token ADD COLUMN project_id BIGINT REFERENCES project(id) ON DELETE 
 UPDATE token SET project_id = (
     SELECT id FROM project WHERE project."user" = token."user" AND project.slug = ''
 );
+ALTER TABLE token ALTER COLUMN project_id SET NOT NULL;
+
 
 CREATE VIEW token_view AS
 SELECT t.id, t.created_at, t.updated_at, t.key_id, t.hash, t."user", t.label, t.path, t.host, t.headers, t.requests, t.last_access_at, t.project_id, p.slug AS project_slug

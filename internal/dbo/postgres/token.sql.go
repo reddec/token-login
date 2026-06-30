@@ -24,7 +24,7 @@ type CreateTokenParams struct {
 	Path      string `json:"path"`
 	Host      string `json:"host"`
 	Headers   []byte `json:"headers"`
-	ProjectID *int64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 }
 
 func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token, error) {
@@ -174,7 +174,7 @@ const listTokenIDsByProject = `-- name: ListTokenIDsByProject :many
 SELECT id FROM token WHERE project_id = $1
 `
 
-func (q *Queries) ListTokenIDsByProject(ctx context.Context, projectID *int64) ([]int64, error) {
+func (q *Queries) ListTokenIDsByProject(ctx context.Context, projectID int64) ([]int64, error) {
 	rows, err := q.db.Query(ctx, listTokenIDsByProject, projectID)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ SELECT id, created_at, updated_at, key_id, hash, "user", label, path, host, head
 
 type ListTokensByUserAndProjectParams struct {
 	User      string `json:"user"`
-	ProjectID *int64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 }
 
 func (q *Queries) ListTokensByUserAndProject(ctx context.Context, arg ListTokensByUserAndProjectParams) ([]TokenView, error) {

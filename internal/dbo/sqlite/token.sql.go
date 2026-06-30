@@ -14,7 +14,7 @@ import (
 const createToken = `-- name: CreateToken :one
 INSERT INTO token (key_id, hash, user, label, path, host, headers, project_id)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, created_at, updated_at, key_id, hash, user, label, path, headers, requests, last_access_at, host, project_id
+RETURNING id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id
 `
 
 type CreateTokenParams struct {
@@ -25,7 +25,7 @@ type CreateTokenParams struct {
 	Path      string          `json:"path"`
 	Host      string          `json:"host"`
 	Headers   json.RawMessage `json:"headers"`
-	ProjectID *int64          `json:"project_id"`
+	ProjectID int64           `json:"project_id"`
 }
 
 func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token, error) {
@@ -49,10 +49,10 @@ func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token
 		&i.User,
 		&i.Label,
 		&i.Path,
+		&i.Host,
 		&i.Headers,
 		&i.Requests,
 		&i.LastAccessAt,
-		&i.Host,
 		&i.ProjectID,
 	)
 	return i, err
@@ -178,7 +178,7 @@ const listTokenIDsByProject = `-- name: ListTokenIDsByProject :many
 SELECT id FROM token WHERE project_id = ?
 `
 
-func (q *Queries) ListTokenIDsByProject(ctx context.Context, projectID *int64) ([]int64, error) {
+func (q *Queries) ListTokenIDsByProject(ctx context.Context, projectID int64) ([]int64, error) {
 	rows, err := q.db.QueryContext(ctx, listTokenIDsByProject, projectID)
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, header
 
 type ListTokensByUserAndProjectParams struct {
 	User      string `json:"user"`
-	ProjectID *int64 `json:"project_id"`
+	ProjectID int64  `json:"project_id"`
 }
 
 func (q *Queries) ListTokensByUserAndProject(ctx context.Context, arg ListTokensByUserAndProjectParams) ([]TokenView, error) {

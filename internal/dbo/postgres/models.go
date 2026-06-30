@@ -30,7 +30,7 @@ type Token struct {
 	Requests     int64     `json:"requests"`
 	LastAccessAt time.Time `json:"last_access_at"`
 	Host         string    `json:"host"`
-	ProjectID    *int64    `json:"project_id"`
+	ProjectID    int64     `json:"project_id"`
 }
 
 type TokenView struct {
@@ -46,6 +46,6 @@ type TokenView struct {
 	Headers      []byte    `json:"headers"`
 	Requests     int64     `json:"requests"`
 	LastAccessAt time.Time `json:"last_access_at"`
-	ProjectID    *int64    `json:"project_id"`
+	ProjectID    int64     `json:"project_id"`
 	ProjectSlug  string    `json:"project_slug"`
 }
