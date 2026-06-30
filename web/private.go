@@ -22,7 +22,7 @@ const (
 
 type Hit struct {
 	Time time.Time
-	ID   int
+	ID   int64
 }
 
 func AuthHandler(state *cache.Cache, accessLog chan<- Hit) http.Handler {
@@ -53,8 +53,8 @@ func AuthHandler(state *cache.Cache, accessLog chan<- Hit) http.Handler {
 		// NOTE: project filtering is done in-memory after cache lookup.
 		// For large deployments with many projects, consider pushing this
 		// filter to the DB/cache layer to avoid loading all tokens.
-		if token.ProjectSlug != projectSlug {
-			slog.Debug("project mismatch", "key", key.ID(), "expected", projectSlug, "actual", token.ProjectSlug)
+		if token.DBToken.ProjectSlug != projectSlug {
+			slog.Debug("project mismatch", "key", key.ID(), "expected", projectSlug, "actual", token.DBToken.ProjectSlug)
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}

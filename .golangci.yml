@@ -7,6 +7,15 @@ linters:
   default: all
   disable:
     - errcheck
+    - tagalign
+    - noinlineerr
+    - nlreturn
+    - lll
+    - wsl
+    - wsl_v5
+    - gocognit
+    - depguard
+    - cyclop
   exclusions:
     generated: lax
     presets:

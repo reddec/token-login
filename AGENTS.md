@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Token-login is a **forward-auth server** for token-based authorization. It provides an authorization flow based on API keys — reverse proxies (Caddy, Nginx, Traefik, Kubernetes ingress) delegate auth decisions to token-login's auth endpoint. Includes a Svelte admin UI for managing tokens, supports SQLite/Postgres/MySQL storage, and offers three login methods (Basic, OIDC, Proxy).
+Token-login is a **forward-auth server** for token-based authorization. It provides an authorization flow based on API keys — reverse proxies (Caddy, Nginx, Traefik, Kubernetes ingress) delegate auth decisions to token-login's auth endpoint. Includes a Vue 3 admin UI for managing tokens, supports SQLite/Postgres storage, and offers three login methods (Basic, OIDC, Proxy).
 
 ## Architecture & Data Flow
 
@@ -15,10 +15,10 @@ Two independent HTTP servers, wired in `cmd/token-login/main.go`:
 
 **Auth flow**: Reverse proxy sends request metadata (host, path, token) to auth server → `web.AuthHandler` parses the key, looks up cache by `KeyID`, validates via `types.AccessKey.Valid()` (globs + SHA3-384 constant-time compare) → returns 204 with `X-User`, `X-Token-Hint`, and custom headers on success, 401 on failure.
 
-**Data flow**: `ent.Client` (ORM) → `cache.Cache` (in-memory, `map[types.KeyID]*cache.Token`, `sync.RWMutex`, polled every `cache.ttl`) → `web.AuthHandler`. Stats flow: `web.Hit` channel (buffer `stats.buffer`) → `plumbing.SyncStats` (aggregates hits + last-access time per interval) → DB transaction.
+**Data flow**: `dbo.Store` (sqlc) → `cache.Cache` (in-memory, `map[types.KeyID]*cache.Token`, `sync.RWMutex`, polled every `cache.ttl`) → `web.AuthHandler`. Stats flow: `web.Hit` channel (buffer `stats.buffer`) → `plumbing.SyncStats` (aggregates hits + last-access time per interval) → DB transaction via `Store.UpdateStats`.
 
 **Wiring** (`cmd/token-login/main.go:run()`):
-1. `ent.New()` opens DB + auto-migrates schema
+1. `open.Open()` opens DB + runs versioned migrations + data migration
 2. `cache.New(store)` + initial `SyncKeys()`
 3. `server.New(store)` → `api.NewServer(srv)` (ogen-generated)
 4. `srv.OnRemove(keysCache.Drop)`, `srv.OnUpdate(keysCache.SyncKey)` — cache invalidation hooks
@@ -31,15 +31,15 @@ Two independent HTTP servers, wired in `cmd/token-login/main.go`:
 | Directory | Purpose |
 |-----------|---------|
 | `cmd/token-login/` | Single-file entrypoint (`main.go`): CLI config parsing, startup wiring, all login middlewares |
-| `internal/ent/` | Ent ORM layer — schema in `schema/token.go`, codegen output + hand-written `init.go` for DB open/auto-migrate |
+| `internal/dbo/` | Database access layer — `store.go` (Store interface + domain types), `sqlite/` and `postgres/` engine packages (sqlc-generated code + adapters), `open/` (factory + migration runner) |
 | `internal/cache/` | In-memory token cache keyed by `types.KeyID`, polled from DB, supports patch/drop/find |
-| `internal/plumbing/` | Async stats persistence (buffered channel → periodic DB transactions) |
+| `internal/plumbing/` | Async stats persistence (buffered channel → periodic DB transactions via `Store.UpdateStats`) |
 | `internal/server/` | API handler implementing the ogen-generated `api.Handler` interface — CRUD tokens, scoped to user from context |
 | `internal/types/` | Cryptographic types: `Key` (40 bytes: 8 KeyID + 32 secret), `AccessKey` (globs + hash validation), `Headers` |
 | `internal/utils/` | Context user helpers (`WithUser`/`GetUser`), flash-cookie helpers (base64, HttpOnly, 10s TTL) |
 | `api/` | OpenAPI-generated code (ogen v1.1.0) — handler interface, client, JSON codec, validators; re-generate via `go generate` |
 | `web/` | `public.go`: `//go:embed admin-ui/dist` → `fs.FS`. `private.go`: `AuthHandler` — the forward-auth HTTP handler |
-| `web/admin-ui/` | Svelte 4 SPA with Vite 5, Bulma CSS, `svelte-spa-router`; API client codegen via `openapi-typescript-codegen` |
+| `web/admin-ui/` | Vue 3 SPA with Vite, shadcn-vue; API client codegen via `openapi-typescript-codegen` |
 | `examples/` | Docker Compose and Kubernetes deployment examples for Caddy, Nginx, Traefik |
 | `docs/` | Logo SVG |
 | `.github/workflows/` | PR: lint + test + migration test; Release: push tag → GoReleaser |
@@ -52,7 +52,7 @@ make test        # go test -v ./...        (all packages)
 make lint        # golangci-lint run       (config: .golangci.yml)
 make snapshot    # goreleaser --snapshot + docker tag as :1 and :snapshot
 make local       # goreleaser -f .goreleaser.local.yaml --clean  (local build)
-make gen         # go generate ./...       (ogen + ent codegen)
+make gen         # go generate ./...       (ogen + sqlc codegen)
 cd web/admin-ui && npm run build   # build Svelte SPA to dist/
 cd web/admin-ui && npm run dev     # Vite dev server at :5050
 cd web/admin-ui && npm run gen     # regenerate TS API client from openapi.yaml
@@ -61,7 +61,7 @@ cd web/admin-ui && npm run check   # svelte-check type checking
 
 Code generation triggers:
 - `api/generate.go`: `//go:generate … ogen … openapi.yaml` → `api/oas_*_gen.go`
-- `internal/ent/generate.go`: `//go:generate … ent generate ./schema` → `internal/ent/token*.go` etc.
+- `internal/dbo/store.go`: `//go:generate sqlc generate -f sqlc.yaml` → `internal/dbo/sqlite/*.sql.go`, `internal/dbo/postgres/*.sql.go`
 
 ## Code Conventions & Common Patterns
 
@@ -69,10 +69,10 @@ Code generation triggers:
 - **OpenAPI spec** (`openapi.yaml`) is the single source of truth for the REST API. Two codegen pipelines consume it:
   - **Go server**: `ogen` (v1.1.0) generates handler interface, client, JSON codec, validators → `api/`. Config: `.ogen.yaml` (convenient_errors off, server + client paths only).
   - **TypeScript client**: `openapi-typescript-codegen` → `web/admin-ui/src/api/`. Run via `npm run gen`.
-- **Database ORM**: `ent` (entgo.io v0.13.1) generates from `internal/ent/schema/token.go`. `ent.New()` in `init.go` auto-migrates on startup.
+- **Database**: `sqlc` (type-safe SQL codegen) generates from SQL files in `internal/dbo/sqlite/queries/` and `internal/dbo/postgres/queries/`. `open.Open()` runs versioned migrations on startup via `sql-migrate`.
 
 ### Server implementation
-- `internal/server.Server` implements `api.Handler` (ogen-generated interface) and wraps `*ent.Client`.
+- `internal/server.Server` implements `api.Handler` (ogen-generated interface) and wraps `dbo.Store`.
 - All CRUD methods scope queries to the current user via `utils.GetUser(ctx)`. This enforces multi-user isolation.
 - Mutation hooks (`OnUpdate`/`OnRemove` callback lists) notify the cache layer of changes.
 
@@ -116,9 +116,9 @@ This is the sole mechanism for passing user identity through the API layer. Serv
 - Debug mode (`--debug.enable`) enables CORS and request logging.
 
 ### Naming conventions
-- Package names are short, lowercase, single-word: `cache`, `ent`, `plumbing`, `utils`, `types`.
+- Package names are short, lowercase, single-word: `cache`, `dbo`, `plumbing`, `utils`, `types`.
 - Test files use `_test` package suffix (e.g., `package server_test`, `package types_test`) for black-box testing.
-- Generated files are named `oas_*_gen.go` (ogen) and `token*.go`/`mutation.go`/`tx.go` etc. (ent).
+- Generated files are named `oas_*_gen.go` (ogen) and `*.sql.go`/`db.go`/`models.go` (sqlc).
 
 ### Linting
 `golangci.yml` enables 60 linters. Tests are excluded (`run.tests: false`). After any code change, run both:
@@ -131,8 +131,8 @@ This is the sole mechanism for passing user identity through the API layer. Serv
 |------|------|
 | `cmd/token-login/main.go` | Single-file entrypoint: config, CLI, startup wiring, all auth middlewares (495 lines) |
 | `openapi.yaml` | OpenAPI 3.0.3 spec — 6 endpoints, 4 schemas (Config, Credential, Token, NameValue). Base: `/api/v1` |
-| `internal/ent/schema/token.go` | Ent schema definition — the authoritative DB model |
-| `internal/ent/init.go` | `ent.New()` — DB open + auto-migrate, supports SQLite and Postgres via URL scheme |
+| `internal/dbo/store.go` | Store interface + domain types — the authoritative DB access contract |
+| `internal/dbo/open/open.go` | `open.Open()` — DB open + migrations, supports SQLite and Postgres via URL scheme |
 | `internal/cache/cache.go` | In-memory token cache; `FindByKey()` is on the auth hot path |
 | `internal/types/access_key.go` | `AccessKey.Valid()` — core auth validation (glob matching + constant-time hash compare) |
 | `web/private.go` | `AuthHandler` — the forward-auth HTTP endpoint |
@@ -150,7 +150,7 @@ This is the sole mechanism for passing user identity through the API layer. Serv
 - **Node 20**, **npm** — frontend build (`web/admin-ui`). Svelte 4, Vite 5, TypeScript 5.
 - **Docker**: FROM scratch, binary ADDed to `/`. Exposes 8080, 8081. Volume `/data`.
 - **Package manager**: Go modules (`go.mod`), npm for frontend.
-- **Codegen**: ogen v1.1.0 (Go server/client from OpenAPI), ent v0.13.1 (ORM from schema), openapi-typescript-codegen (TS client).
+- **Codegen**: ogen v1.1.0 (Go server/client from OpenAPI), sqlc (type-safe SQL from queries), openapi-typescript-codegen (TS client).
 - **No external build system**: plain `Makefile` + `go generate`.
 
 ## Testing & QA

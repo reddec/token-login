@@ -1,0 +1,30 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "sqlite/queries/"
+    schema: "sqlite/migrations/"
+    gen:
+      go:
+        package: "sqlite"
+        out: "sqlite"
+        emit_empty_slices: true
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        query_parameter_limit: 1
+        sql_package: "database/sql"
+
+  - engine: "postgresql"
+    queries: "postgres/queries/"
+    schema: "postgres/migrations/"
+    gen:
+      go:
+        package: "postgres"
+        out: "postgres"
+        emit_empty_slices: true
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        query_parameter_limit: 1
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: "timestamptz"
+            go_type: "time.Time"

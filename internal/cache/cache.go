@@ -7,29 +7,27 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reddec/token-login/internal/ent"
-	"github.com/reddec/token-login/internal/ent/token"
+	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/types"
 )
 
 type State map[types.KeyID]*Token
 
 type Token struct {
-	AccessKey   *types.AccessKey
-	DBToken     *ent.Token
-	ProjectSlug string
+	AccessKey *types.AccessKey
+	DBToken   *dbo.Token
 }
 
 type Cache struct {
-	client *ent.Client
-	state  struct {
+	store dbo.Store
+	state struct {
 		data State
 		lock sync.RWMutex
 	}
 }
 
-func New(client *ent.Client) *Cache {
-	v := &Cache{client: client}
+func New(store dbo.Store) *Cache {
+	v := &Cache{store: store}
 	v.state.data = make(State)
 	return v
 }
@@ -53,7 +51,7 @@ func (v *Cache) Drop(id int) {
 	v.state.lock.Lock()
 	defer v.state.lock.Unlock()
 	for k, a := range v.state.data {
-		if a.DBToken.ID == id {
+		if a.DBToken.ID == int64(id) {
 			delete(v.state.data, k)
 			break
 		}
@@ -85,19 +83,9 @@ func (v *Cache) PollKeys(ctx context.Context, interval time.Duration) {
 }
 
 func (v *Cache) SyncKeys(ctx context.Context) error {
-	all, err := v.client.Token.Query().All(ctx)
+	all, err := v.store.ListAllTokens(ctx)
 	if err != nil {
 		return fmt.Errorf("query all tokens: %w", err)
-	}
-
-	// Build project ID -> slug lookup
-	projects, err := v.client.Project.Query().All(ctx)
-	if err != nil {
-		return fmt.Errorf("query all projects: %w", err)
-	}
-	projectSlugs := make(map[int]string, len(projects))
-	for _, p := range projects {
-		projectSlugs[p.ID] = p.Slug
 	}
 
 	state := make(State, len(all))
@@ -109,15 +97,9 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 			continue
 		}
 
-		projectSlug := ""
-		if t.ProjectID != 0 {
-			projectSlug = projectSlugs[t.ProjectID]
-		}
-
 		state[*t.KeyID] = &Token{
-			AccessKey:   ak,
-			DBToken:     t,
-			ProjectSlug: projectSlug,
+			AccessKey: ak,
+			DBToken:   t,
 		}
 	}
 
@@ -126,7 +108,7 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 }
 
 func (v *Cache) SyncKey(ctx context.Context, id int) error {
-	t, err := v.client.Token.Query().WithProject().Where(token.ID(id)).Only(ctx)
+	t, err := v.store.GetTokenByID(ctx, int64(id))
 	if err != nil {
 		return fmt.Errorf("get token %v: %w", id, err)
 	}
@@ -136,15 +118,9 @@ func (v *Cache) SyncKey(ctx context.Context, id int) error {
 		return fmt.Errorf("create access key %v: %w", id, err)
 	}
 
-	projectSlug := ""
-	if t.Edges.Project != nil {
-		projectSlug = t.Edges.Project.Slug
-	}
-
 	v.Patch(*t.KeyID, &Token{
-		AccessKey:   aKey,
-		DBToken:     t,
-		ProjectSlug: projectSlug,
+		AccessKey: aKey,
+		DBToken:   t,
 	})
 	return nil
 }

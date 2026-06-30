@@ -5,12 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"entgo.io/ent/dialect/sql"
-
 	"github.com/reddec/token-login/api"
-	"github.com/reddec/token-login/internal/ent"
-	"github.com/reddec/token-login/internal/ent/project"
-	"github.com/reddec/token-login/internal/ent/token"
+	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/types"
 	"github.com/reddec/token-login/internal/utils"
 )
@@ -20,12 +16,12 @@ type (
 	RemoveHandler func(id int)
 )
 
-func New(client *ent.Client) *Server {
-	return &Server{client: client}
+func New(store dbo.Store) *Server {
+	return &Server{store: store}
 }
 
 type Server struct {
-	client   *ent.Client
+	store    dbo.Store
 	onUpdate []UpdateHandler
 	onRemove []RemoveHandler
 }
@@ -45,7 +41,6 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 	}
 
 	headers := parseHeaders(req.Headers)
-	// validate config
 	_, err = types.NewAccessKey(key.Hash(), req.Host.Value, req.Path.Value)
 	if err != nil {
 		return nil, fmt.Errorf("validate key: %w", err)
@@ -54,11 +49,8 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 	user := utils.GetUser(ctx)
 	kid := key.ID()
 
-	// Validate project belongs to user (if specified)
 	if req.ProjectId != 0 {
-		exists, err := srv.client.Project.Query().
-			Where(project.ID(req.ProjectId), project.User(user)).
-			Exist(ctx)
+		exists, err := srv.store.ProjectExists(ctx, user, int64(req.ProjectId))
 		if err != nil {
 			return nil, fmt.Errorf("check project: %w", err)
 		}
@@ -67,32 +59,28 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 		}
 	}
 
-	t, err := srv.client.Token.Create().
-		SetUser(user).
-		SetHash(key.Hash()).
-		SetKeyID(&kid).
-		SetLabel(req.Label.Value).
-		SetHeaders(headers).
-		SetHost(req.Host.Value).
-		SetPath(req.Path.Value).
-		SetProjectID(req.ProjectId).
-		Save(ctx)
-
+	t, err := srv.store.CreateToken(ctx, dbo.CreateTokenParams{
+		User:      user,
+		Hash:      key.Hash(),
+		KeyID:     &kid,
+		Label:     req.Label.Value,
+		Headers:   headers,
+		Host:      req.Host.Value,
+		Path:      req.Path.Value,
+		ProjectID: int64(req.ProjectId),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create token: %w", err)
 	}
-	srv.notifyUpdated(t.ID)
+	srv.notifyUpdated(int(t.ID))
 	return &api.Credential{
-		ID:  t.ID,
+		ID:  int(t.ID),
 		Key: key.String(),
 	}, nil
 }
 
 func (srv *Server) DeleteToken(ctx context.Context, params api.DeleteTokenParams) error {
-	removed, err := srv.client.Token.Delete().Where(
-		token.User(utils.GetUser(ctx)),
-		token.ID(params.Token),
-	).Exec(ctx)
+	removed, err := srv.store.DeleteToken(ctx, utils.GetUser(ctx), int64(params.Token))
 	if err != nil {
 		return fmt.Errorf("delete token: %w", err)
 	}
@@ -103,10 +91,7 @@ func (srv *Server) DeleteToken(ctx context.Context, params api.DeleteTokenParams
 }
 
 func (srv *Server) GetToken(ctx context.Context, params api.GetTokenParams) (*api.Token, error) {
-	t, err := srv.client.Token.Query().Where(
-		token.User(utils.GetUser(ctx)),
-		token.ID(params.Token),
-	).WithProject().Only(ctx)
+	t, err := srv.store.GetToken(ctx, utils.GetUser(ctx), int64(params.Token))
 	if err != nil {
 		return nil, fmt.Errorf("get token: %w", err)
 	}
@@ -114,39 +99,29 @@ func (srv *Server) GetToken(ctx context.Context, params api.GetTokenParams) (*ap
 }
 
 func (srv *Server) ListTokens(ctx context.Context, params api.ListTokensParams) ([]api.Token, error) {
-	q := srv.client.Token.Query().Where(token.User(utils.GetUser(ctx))).WithProject().Order(token.ByID(sql.OrderDesc()))
+	var projectID int64
 	if p, ok := params.Project.Get(); ok {
-		q = q.Where(token.ProjectID(p))
+		projectID = int64(p)
 	}
-	list, err := q.All(ctx)
+	list, err := srv.store.ListTokens(ctx, utils.GetUser(ctx), projectID)
 	if err != nil {
 		return nil, fmt.Errorf("list tokens: %w", err)
 	}
-	var out = make([]api.Token, 0, len(list))
+	out := make([]api.Token, 0, len(list))
 	for _, t := range list {
-		x := mapToken(t)
-		out = append(out, *x)
+		out = append(out, *mapToken(t))
 	}
 	return out, nil
 }
 
 func (srv *Server) RefreshToken(ctx context.Context, params api.RefreshTokenParams) (*api.Credential, error) {
 	key, err := types.NewKey()
-
 	if err != nil {
 		return nil, fmt.Errorf("generate key: %w", err)
 	}
 	kid := key.ID()
 
-	changed, err := srv.client.Token.Update().
-		Where(
-			token.User(utils.GetUser(ctx)),
-			token.ID(params.Token),
-		).
-		SetHash(key.Hash()).
-		SetKeyID(&kid).
-		Save(ctx)
-
+	changed, err := srv.store.RefreshToken(ctx, utils.GetUser(ctx), int64(params.Token), key.Hash(), &kid)
 	if err != nil {
 		return nil, fmt.Errorf("update token: %w", err)
 	}
@@ -161,28 +136,25 @@ func (srv *Server) RefreshToken(ctx context.Context, params api.RefreshTokenPara
 }
 
 func (srv *Server) UpdateToken(ctx context.Context, req *api.TokenPatch, params api.UpdateTokenParams) error {
-	upd := srv.client.Token.Update().Where(
-		token.User(utils.GetUser(ctx)),
-		token.ID(params.Token),
-	)
-
+	p := dbo.UpdateTokenParams{
+		User: utils.GetUser(ctx),
+		ID:   int64(params.Token),
+	}
 	if req.Host.Set {
-		upd.SetHost(req.Host.Value)
+		p.Host = &req.Host.Value
 	}
-
 	if req.Path.Set {
-		upd.SetPath(req.Path.Value)
+		p.Path = &req.Path.Value
 	}
-
 	if req.Label.Set {
-		upd.SetLabel(req.Label.Value)
+		p.Label = &req.Label.Value
 	}
-
 	if req.Headers != nil {
-		upd.SetHeaders(parseHeaders(req.Headers))
+		h := parseHeaders(req.Headers)
+		p.Headers = &h
 	}
 
-	changed, err := upd.Save(ctx)
+	changed, err := srv.store.UpdateToken(ctx, p)
 	if err != nil {
 		return fmt.Errorf("update token: %w", err)
 	}
@@ -205,6 +177,73 @@ func (srv *Server) notifyRemoved(id int) {
 	}
 }
 
+func (srv *Server) ListProjects(ctx context.Context) ([]api.Project, error) {
+	list, err := srv.store.ListProjects(ctx, utils.GetUser(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	out := make([]api.Project, 0, len(list))
+	for _, p := range list {
+		out = append(out, *mapProject(p))
+	}
+	return out, nil
+}
+
+func (srv *Server) CreateProject(ctx context.Context, req *api.ProjectConfig) (*api.Project, error) {
+	p, err := srv.store.CreateProject(ctx, dbo.CreateProjectParams{
+		User:        utils.GetUser(ctx),
+		Slug:        req.Slug,
+		Description: req.Description.Or(""),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create project: %w", err)
+	}
+	return mapProject(p), nil
+}
+
+func (srv *Server) GetProject(ctx context.Context, params api.GetProjectParams) (*api.Project, error) {
+	p, err := srv.store.GetProject(ctx, utils.GetUser(ctx), int64(params.Project))
+	if err != nil {
+		return nil, fmt.Errorf("get project: %w", err)
+	}
+	return mapProject(p), nil
+}
+
+func (srv *Server) UpdateProject(ctx context.Context, req *api.ProjectPatch, params api.UpdateProjectParams) error {
+	changed, err := srv.store.UpdateProject(ctx, dbo.UpdateProjectParams{
+		User:        utils.GetUser(ctx),
+		ID:          int64(params.Project),
+		Description: req.Description.Or(""),
+	})
+	if err != nil {
+		return fmt.Errorf("update project: %w", err)
+	}
+	if changed == 0 {
+		return errors.New("unknown project")
+	}
+	return nil
+}
+
+func (srv *Server) DeleteProject(ctx context.Context, params api.DeleteProjectParams) error {
+	user := utils.GetUser(ctx)
+	p, err := srv.store.GetProject(ctx, user, int64(params.Project))
+	if err != nil {
+		return fmt.Errorf("get project: %w", err)
+	}
+	if p.Slug == "" {
+		return errors.New("cannot delete default project")
+	}
+
+	tokenIDs, err := srv.store.DeleteProject(ctx, user, int64(params.Project))
+	if err != nil {
+		return fmt.Errorf("delete project: %w", err)
+	}
+	for _, tid := range tokenIDs {
+		srv.notifyUpdated(int(tid))
+	}
+	return nil
+}
+
 func parseHeaders(v []api.NameValue) types.Headers {
 	out := make(types.Headers, 0, len(v))
 	for _, it := range v {
@@ -216,15 +255,9 @@ func parseHeaders(v []api.NameValue) types.Headers {
 	return out
 }
 
-func mapToken(t *ent.Token) *api.Token {
-	projectID := 0
-	projectSlug := ""
-	if t.Edges.Project != nil {
-		projectID = t.Edges.Project.ID
-		projectSlug = t.Edges.Project.Slug
-	}
+func mapToken(t *dbo.Token) *api.Token {
 	return &api.Token{
-		ID:        t.ID,
+		ID:        int(t.ID),
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
 		LastAccessAt: api.OptDateTime{
@@ -238,8 +271,18 @@ func mapToken(t *ent.Token) *api.Token {
 		Path:        t.Path,
 		Headers:     mapHeaders(t.Headers),
 		Requests:    t.Requests,
-		ProjectId:   projectID,
-		ProjectSlug: projectSlug,
+		ProjectId:   int(t.ProjectID),
+		ProjectSlug: t.ProjectSlug,
+	}
+}
+
+func mapProject(p *dbo.Project) *api.Project {
+	return &api.Project{
+		ID:          int(p.ID),
+		CreatedAt:   p.CreatedAt,
+		UpdatedAt:   p.UpdatedAt,
+		Slug:        p.Slug,
+		Description: p.Description,
 	}
 }
 
@@ -252,117 +295,4 @@ func mapHeaders(v types.Headers) []api.NameValue {
 		})
 	}
 	return out
-}
-
-// --- Project CRUD ---
-
-func (srv *Server) ListProjects(ctx context.Context) ([]api.Project, error) {
-	list, err := srv.client.Project.Query().
-		Where(project.User(utils.GetUser(ctx))).
-		Order(project.ByID(sql.OrderAsc())).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
-	}
-	out := make([]api.Project, 0, len(list))
-	for _, p := range list {
-		out = append(out, *mapProject(p))
-	}
-	return out, nil
-}
-
-func (srv *Server) CreateProject(ctx context.Context, req *api.ProjectConfig) (*api.Project, error) {
-	builder := srv.client.Project.Create().
-		SetUser(utils.GetUser(ctx)).
-		SetSlug(req.Slug)
-	if desc, ok := req.Description.Get(); ok {
-		builder.SetDescription(desc)
-	}
-	p, err := builder.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("create project: %w", err)
-	}
-	return mapProject(p), nil
-}
-
-func (srv *Server) GetProject(ctx context.Context, params api.GetProjectParams) (*api.Project, error) {
-	p, err := srv.client.Project.Query().
-		Where(
-			project.ID(params.Project),
-			project.User(utils.GetUser(ctx)),
-		).Only(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get project: %w", err)
-	}
-	return mapProject(p), nil
-}
-
-func (srv *Server) UpdateProject(ctx context.Context, req *api.ProjectPatch, params api.UpdateProjectParams) error {
-	upd := srv.client.Project.Update().Where(
-		project.ID(params.Project),
-		project.User(utils.GetUser(ctx)),
-	)
-	if desc, ok := req.Description.Get(); ok {
-		upd.SetDescription(desc)
-	}
-	changed, err := upd.Save(ctx)
-	if err != nil {
-		return fmt.Errorf("update project: %w", err)
-	}
-	if changed == 0 {
-		return errors.New("unknown project")
-	}
-	return nil
-}
-
-func (srv *Server) DeleteProject(ctx context.Context, params api.DeleteProjectParams) error {
-	// Protect the default project (empty slug) from deletion
-	user := utils.GetUser(ctx)
-	p, err := srv.client.Project.Query().
-		Where(
-			project.ID(params.Project),
-			project.User(user),
-		).Only(ctx)
-	if err != nil {
-		return fmt.Errorf("get project: %w", err)
-	}
-	if p.Slug == "" {
-		return errors.New("cannot delete default project")
-	}
-
-	// Collect affected token IDs for cache invalidation
-	tokenIDs, err := srv.client.Token.Query().
-		Where(token.ProjectID(params.Project)).
-		IDs(ctx)
-	if err != nil {
-		return fmt.Errorf("list tokens in project: %w", err)
-	}
-
-	// Unlink tokens from this project
-	if _, err := srv.client.Token.Update().
-		Where(token.ProjectID(params.Project)).
-		ClearProjectID().
-		Save(ctx); err != nil {
-		return fmt.Errorf("unlink tokens from project: %w", err)
-	}
-
-	if err := srv.client.Project.DeleteOneID(params.Project).Exec(ctx); err != nil {
-		return fmt.Errorf("delete project: %w", err)
-	}
-
-	// Invalidate cache for all affected tokens
-	for _, tid := range tokenIDs {
-		srv.notifyUpdated(tid)
-	}
-	return nil
-}
-
-func mapProject(p *ent.Project) *api.Project {
-	return &api.Project{
-		ID:          p.ID,
-		CreatedAt:   p.CreatedAt,
-		UpdatedAt:   p.UpdatedAt,
-		Slug:        p.Slug,
-		Description: p.Description,
-	}
 }

@@ -271,10 +271,14 @@ For example, to increase Auth server graceful shutdown to 1 minute:
 
 ## Storage
 
-Token-login can be used with popular databases like SQLite or Postgres, and automatically manages schema migration.
+Token-login supports **SQLite** (cgo-free, pure Go) and **PostgreSQL**. MySQL support has been dropped.
 
-You can easily specify the database type by including the corresponding schema in the URL. For example, use `sqlite://`
-for SQLite, `postgres://` for PostgreSQL, and `mysql://` for MySQL.
+Database migrations are handled automatically on startup via versioned SQL migrations. The minimum version required
+for upgrade is **v1.2.0** — earlier versions must be upgraded to v1.2.0 first.
+
+Specify the database type by including the corresponding scheme in the URL:
+- `sqlite://` for SQLite (default)
+- `postgres://` for PostgreSQL
 
 By default, token-login uses a SQLite database stored locally in the file `data.sqlite`.
 
@@ -282,13 +286,13 @@ The default values for advanced parameters should suffice for most use cases, bu
 using the `--help` command to view the available options in the "Database Configuration" section.
 
      Database configuration:
-      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared) [$DB_URL]
+      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)) [$DB_URL]
       --db.max-conn=               Maximum number of opened connections to database (default: 10) [$DB_MAX_CONN]
       --db.idle-conn=              Maximum number of idle connections to database (default: 1) [$DB_IDLE_CONN]
       --db.idle-timeout=           Maximum amount of time a connection may be idle (default: 0) [$DB_IDLE_TIMEOUT]
       --db.conn-life-time=         Maximum amount of time a connection may be reused (default: 0) [$DB_CONN_LIFE_TIME]
 
-For example with Postgres (user and password `postgress`, host - `db`):
+For example with Postgres (user and password `postgres`, host - `db`):
 
     token-login --db.url "postgres://postgres:postgres@db"
 
@@ -572,7 +576,9 @@ make snapshot
 ## 2.0.0
 
 - **Projects:** tokens are now scoped to projects — organize tokens by project, manage them from the project detail page
-- **Database:** automatic migration — existing databases are upgraded on startup; all tokens are preserved
+- **Database:** migrated from Ent ORM to sqlc + sql-migrate — versioned SQL migrations replace auto-migration
+- **Database:** minimum upgrade version is v1.2.0; MySQL support dropped (SQLite + PostgreSQL only)
+- **Database:** SQLite uses cgo-free pure-Go driver (modernc.org/sqlite)
 - **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
 - **OIDC:** new `--scopes` / `SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid`)
 - **OIDC:** new `--session-ttl` / `SESSION_TTL` flag — session lifetime (default: `168h`)

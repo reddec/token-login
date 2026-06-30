@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/reddec/token-login/api"
-	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/dbo/open"
 	"github.com/reddec/token-login/internal/server"
 	"github.com/reddec/token-login/internal/utils"
 )
@@ -36,7 +36,7 @@ func defaultProjectFor(t *testing.T, srv *server.Server, ctx context.Context) in
 
 func TestNew(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 
 	defer client.Close()
@@ -216,7 +216,7 @@ func TestNew(t *testing.T) {
 
 func TestProjectCRUD(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -273,14 +273,14 @@ func TestProjectCRUD(t *testing.T) {
 		assert.Equal(t, "Updated description", p.Description)
 	})
 
-	t.Run("delete project unlinks tokens", func(t *testing.T) {
+	t.Run("delete project cascades to tokens", func(t *testing.T) {
 		list, err := srv.ListProjects(aliceCtx)
 		require.NoError(t, err)
 		nonDefault := list[1] // my-project
 
 		// create a token in this project
 		cred, err := srv.CreateToken(aliceCtx, &api.TokenConfig{
-			Label:     api.NewOptString("to-unlink"),
+			Label:     api.NewOptString("cascade-test"),
 			ProjectId: nonDefault.ID,
 		})
 		require.NoError(t, err)
@@ -293,11 +293,9 @@ func TestProjectCRUD(t *testing.T) {
 		_, err = srv.GetProject(aliceCtx, api.GetProjectParams{Project: nonDefault.ID})
 		require.Error(t, err)
 
-		// verify token was unlinked (projectId = 0, no slug)
-		tok, err := srv.GetToken(aliceCtx, api.GetTokenParams{Token: cred.ID})
-		require.NoError(t, err)
-		assert.Equal(t, 0, tok.ProjectId)
-		assert.Equal(t, "", tok.ProjectSlug)
+		// verify token was cascade-deleted with the project
+		_, err = srv.GetToken(aliceCtx, api.GetTokenParams{Token: cred.ID})
+		require.Error(t, err)
 	})
 
 	t.Run("cannot delete default project", func(t *testing.T) {
@@ -313,7 +311,7 @@ func TestProjectCRUD(t *testing.T) {
 
 func TestProjectUserIsolation(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -379,7 +377,7 @@ func TestProjectUserIsolation(t *testing.T) {
 
 func TestProjectSlugPerUser(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -410,7 +408,7 @@ func TestProjectSlugPerUser(t *testing.T) {
 
 func TestTokenAssignedToProject(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -453,7 +451,7 @@ func TestTokenAssignedToProject(t *testing.T) {
 
 func TestLastAccessAtSerializationBug(t *testing.T) {
 	ctx := context.Background()
-	client, err := ent.New(ctx, "file::memory:?cache=shared", nil)
+	client, err := open.Open(ctx, "sqlite://:memory:?cache=shared", nil)
 	require.NoError(t, err)
 	defer client.Close()
 

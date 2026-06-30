@@ -26,7 +26,7 @@ import (
 
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/cache"
-	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/dbo/open"
 	"github.com/reddec/token-login/internal/plumbing"
 	"github.com/reddec/token-login/internal/redisstore"
 	"github.com/reddec/token-login/internal/server"
@@ -134,7 +134,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	config.setupLogging()
 
 	// setup db
-	store, err := ent.New(ctx, config.DB.URL, config.configureDatabase)
+	store, err := open.Open(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}

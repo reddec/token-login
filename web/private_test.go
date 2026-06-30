@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/reddec/token-login/internal/cache"
-	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/types"
 	"github.com/reddec/token-login/web"
 )
@@ -25,21 +25,21 @@ func setupToken(t *testing.T, host, path string, headers types.Headers, projectS
 	ak, err := types.NewAccessKey(key.Hash(), host, path)
 	require.NoError(t, err)
 
-	entToken := &ent.Token{
-		ID:      1,
-		User:    "testuser",
-		KeyID:   func() *types.KeyID { k := key.ID(); return &k }(),
-		Host:    host,
-		Path:    path,
-		Headers: headers,
+	dbToken := &dbo.Token{
+		ID:          1,
+		User:        "testuser",
+		KeyID:       func() *types.KeyID { k := key.ID(); return &k }(),
+		Host:        host,
+		Path:        path,
+		Headers:     headers,
+		ProjectSlug: projectSlug,
 	}
 
 	c := cache.New(nil)
 	c.Set(cache.State{
 		key.ID(): {
-			AccessKey:   ak,
-			DBToken:     entToken,
-			ProjectSlug: projectSlug,
+			AccessKey: ak,
+			DBToken:   dbToken,
 		},
 	})
 
@@ -71,7 +71,7 @@ func TestAuthHandlerSuccess(t *testing.T) {
 	// access log should have one entry
 	select {
 	case hit := <-accessLog:
-		assert.Equal(t, 1, hit.ID)
+		assert.Equal(t, int64(1), hit.ID)
 	default:
 		t.Error("expected hit in access log")
 	}
