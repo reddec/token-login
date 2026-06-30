@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/reddec/token-login/internal/types"
 )
 
 const createToken = `-- name: CreateToken :one
@@ -18,7 +20,7 @@ RETURNING id, created_at, updated_at, key_id, hash, user, label, path, host, hea
 `
 
 type CreateTokenParams struct {
-	KeyID     string          `json:"key_id"`
+	KeyID     types.KeyID     `json:"key_id"`
 	Hash      []byte          `json:"hash"`
 	User      string          `json:"user"`
 	Label     string          `json:"label"`
@@ -297,10 +299,10 @@ WHERE user = ? AND id = ?
 `
 
 type RefreshTokenParams struct {
-	Hash  []byte `json:"hash"`
-	KeyID string `json:"key_id"`
-	User  string `json:"user"`
-	ID    int64  `json:"id"`
+	Hash  []byte      `json:"hash"`
+	KeyID types.KeyID `json:"key_id"`
+	User  string      `json:"user"`
+	ID    int64       `json:"id"`
 }
 
 func (q *Queries) RefreshToken(ctx context.Context, arg RefreshTokenParams) (int64, error) {

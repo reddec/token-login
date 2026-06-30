@@ -12,6 +12,15 @@ sql:
         emit_pointers_for_null_types: true
         query_parameter_limit: 1
         sql_package: "database/sql"
+        overrides:
+          - column: "token.key_id"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "KeyID"
+          - column: "token_view.key_id"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "KeyID"
 
   - engine: "postgresql"
     queries: "postgres/queries/"
@@ -28,3 +37,11 @@ sql:
         overrides:
           - db_type: "timestamptz"
             go_type: "time.Time"
+          - column: "token.key_id"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "KeyID"
+          - column: "token_view.key_id"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "KeyID"

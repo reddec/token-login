@@ -7,6 +7,8 @@ package sqlite
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/reddec/token-login/internal/types"
 )
 
 type Project struct {
@@ -22,7 +24,7 @@ type Token struct {
 	ID           int64           `json:"id"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
-	KeyID        string          `json:"key_id"`
+	KeyID        types.KeyID     `json:"key_id"`
 	Hash         []byte          `json:"hash"`
 	User         string          `json:"user"`
 	Label        string          `json:"label"`
@@ -38,7 +40,7 @@ type TokenView struct {
 	ID           int64           `json:"id"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
-	KeyID        string          `json:"key_id"`
+	KeyID        types.KeyID     `json:"key_id"`
 	Hash         []byte          `json:"hash"`
 	User         string          `json:"user"`
 	Label        string          `json:"label"`

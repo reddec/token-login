@@ -6,6 +6,8 @@ package postgres
 
 import (
 	"time"
+
+	"github.com/reddec/token-login/internal/types"
 )
 
 type Project struct {
@@ -18,34 +20,34 @@ type Project struct {
 }
 
 type Token struct {
-	ID           int64     `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	KeyID        string    `json:"key_id"`
-	Hash         []byte    `json:"hash"`
-	User         string    `json:"user"`
-	Label        string    `json:"label"`
-	Path         string    `json:"path"`
-	Headers      []byte    `json:"headers"`
-	Requests     int64     `json:"requests"`
-	LastAccessAt time.Time `json:"last_access_at"`
-	Host         string    `json:"host"`
-	ProjectID    int64     `json:"project_id"`
+	ID           int64       `json:"id"`
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	KeyID        types.KeyID `json:"key_id"`
+	Hash         []byte      `json:"hash"`
+	User         string      `json:"user"`
+	Label        string      `json:"label"`
+	Path         string      `json:"path"`
+	Headers      []byte      `json:"headers"`
+	Requests     int64       `json:"requests"`
+	LastAccessAt time.Time   `json:"last_access_at"`
+	Host         string      `json:"host"`
+	ProjectID    int64       `json:"project_id"`
 }
 
 type TokenView struct {
-	ID           int64     `json:"id"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	KeyID        string    `json:"key_id"`
-	Hash         []byte    `json:"hash"`
-	User         string    `json:"user"`
-	Label        string    `json:"label"`
-	Path         string    `json:"path"`
-	Host         string    `json:"host"`
-	Headers      []byte    `json:"headers"`
-	Requests     int64     `json:"requests"`
-	LastAccessAt time.Time `json:"last_access_at"`
-	ProjectID    int64     `json:"project_id"`
-	ProjectSlug  string    `json:"project_slug"`
+	ID           int64       `json:"id"`
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	KeyID        types.KeyID `json:"key_id"`
+	Hash         []byte      `json:"hash"`
+	User         string      `json:"user"`
+	Label        string      `json:"label"`
+	Path         string      `json:"path"`
+	Host         string      `json:"host"`
+	Headers      []byte      `json:"headers"`
+	Requests     int64       `json:"requests"`
+	LastAccessAt time.Time   `json:"last_access_at"`
+	ProjectID    int64       `json:"project_id"`
+	ProjectSlug  string      `json:"project_slug"`
 }

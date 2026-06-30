@@ -25,10 +25,9 @@ func (s *store) Close() error {
 	return s.db.Close()
 }
 
-
 func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
 	row, err := s.q.CreateToken(ctx, CreateTokenParams{
-		KeyID:     p.KeyID.String(),
+		KeyID:     *p.KeyID,
 		Hash:      p.Hash,
 		User:      p.User,
 		Label:     p.Label,
@@ -125,12 +124,11 @@ func (s *store) DeleteToken(ctx context.Context, user string, id int64) (int64, 
 func (s *store) RefreshToken(ctx context.Context, user string, id int64, hash []byte, keyID *types.KeyID) (int64, error) {
 	return s.q.RefreshToken(ctx, RefreshTokenParams{
 		Hash:  hash,
-		KeyID: keyID.String(),
+		KeyID: *keyID,
 		User:  user,
 		ID:    id,
 	})
 }
-
 
 func (s *store) CreateProject(ctx context.Context, p dbo.CreateProjectParams) (*dbo.Project, error) {
 	row, err := s.q.CreateProject(ctx, CreateProjectParams{
@@ -200,7 +198,6 @@ func (s *store) ProjectExists(ctx context.Context, user string, id int64) (bool,
 	return ok, nil
 }
 
-
 func (s *store) ListAllTokens(ctx context.Context) ([]*dbo.Token, error) {
 	rows, err := s.q.ListAllTokens(ctx)
 	if err != nil {
@@ -228,7 +225,6 @@ func (s *store) ListAllProjects(ctx context.Context) ([]*dbo.Project, error) {
 	return out, nil
 }
 
-
 func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -249,7 +245,6 @@ func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry)
 	return tx.Commit()
 }
 
-
 func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Project, error) {
 	row, err := s.q.GetDefaultProject(ctx, user)
 	if err == nil {
@@ -268,12 +263,11 @@ func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Pro
 	}, nil
 }
 
-
 func tokenViewToDomain(row TokenView) *dbo.Token {
-	kid, _ := parseKeyID(row.KeyID)
+	kid := row.KeyID
 	return &dbo.Token{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		KeyID: kid, Hash: row.Hash, User: row.User, Label: row.Label,
+		KeyID: &kid, Hash: row.Hash, User: row.User, Label: row.Label,
 		Path: row.Path, Host: row.Host, Headers: unmarshalHeaders(row.Headers),
 		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
@@ -281,27 +275,19 @@ func tokenViewToDomain(row TokenView) *dbo.Token {
 }
 
 func tokenToDomain(
-	id int64, createdAt, updatedAt time.Time, keyID string, hash []byte,
+	id int64, createdAt, updatedAt time.Time, keyID types.KeyID, hash []byte,
 	user, label, path, host string, headers json.RawMessage,
 	projectID int64, requests int64, lastAccessAt time.Time,
 	projectSlug string,
 ) *dbo.Token {
-	kid, _ := parseKeyID(keyID)
+	kid := keyID
 	return &dbo.Token{
 		ID: id, CreatedAt: createdAt, UpdatedAt: updatedAt,
-		KeyID: kid, Hash: hash, User: user, Label: label,
+		KeyID: &kid, Hash: hash, User: user, Label: label,
 		Path: path, Host: host, Headers: unmarshalHeaders(headers),
 		ProjectID: projectID, ProjectSlug: projectSlug,
 		Requests: requests, LastAccessAt: lastAccessAt,
 	}
-}
-
-func parseKeyID(s string) (*types.KeyID, error) {
-	var kid types.KeyID
-	if err := kid.UnmarshalText([]byte(s)); err != nil {
-		return nil, err
-	}
-	return &kid, nil
 }
 
 func marshalHeaders(h types.Headers) json.RawMessage {
