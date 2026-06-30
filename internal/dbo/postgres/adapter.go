@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -33,7 +32,7 @@ func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.
 		Label:     p.Label,
 		Path:      p.Path,
 		Host:      p.Host,
-		Headers:   marshalHeaders(p.Headers),
+		Headers:   p.Headers,
 		ProjectID: p.ProjectID,
 	})
 	if err != nil {
@@ -105,7 +104,7 @@ func (s *store) UpdateToken(ctx context.Context, p dbo.UpdateTokenParams) (int64
 		label = *p.Label
 	}
 	if p.Headers != nil {
-		headers = marshalHeaders(*p.Headers)
+		headers = *p.Headers
 	}
 	return s.q.UpdateToken(ctx, UpdateTokenParams{
 		Host:    host,
@@ -264,7 +263,7 @@ func tokenViewToDomain(row TokenView) *dbo.Token {
 	return &dbo.Token{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		KeyID: &kid, Hash: row.Hash, User: row.User, Label: row.Label,
-		Path: row.Path, Host: row.Host, Headers: unmarshalHeaders(row.Headers),
+		Path: row.Path, Host: row.Host, Headers: row.Headers,
 		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
 	}
@@ -272,7 +271,7 @@ func tokenViewToDomain(row TokenView) *dbo.Token {
 
 func tokenToDomain(
 	id int64, createdAt, updatedAt time.Time, keyID types.KeyID, hash []byte,
-	user, label, path, host string, headers []byte,
+	user, label, path, host string, headers types.Headers,
 	projectID int64, requests int64, lastAccessAt time.Time,
 	projectSlug string,
 ) *dbo.Token {
@@ -280,30 +279,8 @@ func tokenToDomain(
 	return &dbo.Token{
 		ID: id, CreatedAt: createdAt, UpdatedAt: updatedAt,
 		KeyID: &kid, Hash: hash, User: user, Label: label,
-		Path: path, Host: host, Headers: unmarshalHeaders(headers),
+		Path: path, Host: host, Headers: headers,
 		ProjectID: projectID, ProjectSlug: projectSlug,
 		Requests: requests, LastAccessAt: lastAccessAt,
 	}
-}
-
-func marshalHeaders(h types.Headers) []byte {
-	if h == nil {
-		return []byte("[]")
-	}
-	data, err := json.Marshal(h)
-	if err != nil {
-		return []byte("[]")
-	}
-	return data
-}
-
-func unmarshalHeaders(raw []byte) types.Headers {
-	if raw == nil {
-		return nil
-	}
-	var h types.Headers
-	if err := json.Unmarshal(raw, &h); err != nil {
-		return nil
-	}
-	return h
 }

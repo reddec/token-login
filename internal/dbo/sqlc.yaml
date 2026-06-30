@@ -21,6 +21,14 @@ sql:
             go_type:
               import: "github.com/reddec/token-login/internal/types"
               type: "KeyID"
+          - column: "token.headers"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "Headers"
+          - column: "token_view.headers"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "Headers"
 
   - engine: "postgresql"
     queries: "postgres/queries/"
@@ -41,6 +49,14 @@ sql:
             go_type:
               import: "github.com/reddec/token-login/internal/types"
               type: "KeyID"
+          - column: "token.headers"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "Headers"
+          - column: "token_view.headers"
+            go_type:
+              import: "github.com/reddec/token-login/internal/types"
+              type: "Headers"
           - column: "token_view.key_id"
             go_type:
               import: "github.com/reddec/token-login/internal/types"

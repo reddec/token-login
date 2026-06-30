@@ -5,6 +5,7 @@ import (
 	"crypto/sha3"
 	"database/sql/driver"
 	"encoding/base32"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +44,33 @@ func (headers Headers) Without(name string) Headers {
 	}
 	return ans
 }
+
+// Scan implements sql.Scanner for JSON headers stored as JSON/JSONB.
+func (h *Headers) Scan(src any) error {
+	if src == nil {
+		*h = nil
+		return nil
+	}
+	var data []byte
+	switch v := src.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return fmt.Errorf("cannot scan %T into Headers", src)
+	}
+	return json.Unmarshal(data, h)
+}
+
+// Value implements driver.Valuer for JSON headers.
+func (h Headers) Value() (driver.Value, error) {
+	if h == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(h)
+}
+
 
 func NewKey() (Key, error) {
 	var key Key

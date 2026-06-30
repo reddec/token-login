@@ -7,7 +7,6 @@ package sqlite
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/reddec/token-login/internal/types"
@@ -20,14 +19,14 @@ RETURNING id, created_at, updated_at, key_id, hash, user, label, path, host, hea
 `
 
 type CreateTokenParams struct {
-	KeyID     types.KeyID     `json:"key_id"`
-	Hash      []byte          `json:"hash"`
-	User      string          `json:"user"`
-	Label     string          `json:"label"`
-	Path      string          `json:"path"`
-	Host      string          `json:"host"`
-	Headers   json.RawMessage `json:"headers"`
-	ProjectID int64           `json:"project_id"`
+	KeyID     types.KeyID   `json:"key_id"`
+	Hash      []byte        `json:"hash"`
+	User      string        `json:"user"`
+	Label     string        `json:"label"`
+	Path      string        `json:"path"`
+	Host      string        `json:"host"`
+	Headers   types.Headers `json:"headers"`
+	ProjectID int64         `json:"project_id"`
 }
 
 func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token, error) {
@@ -325,12 +324,12 @@ WHERE user = ? AND id = ?
 `
 
 type UpdateTokenParams struct {
-	Host    string          `json:"host"`
-	Path    string          `json:"path"`
-	Label   string          `json:"label"`
-	Headers json.RawMessage `json:"headers"`
-	User    string          `json:"user"`
-	ID      int64           `json:"id"`
+	Host    string        `json:"host"`
+	Path    string        `json:"path"`
+	Label   string        `json:"label"`
+	Headers types.Headers `json:"headers"`
+	User    string        `json:"user"`
+	ID      int64         `json:"id"`
 }
 
 func (q *Queries) UpdateToken(ctx context.Context, arg UpdateTokenParams) (int64, error) {
