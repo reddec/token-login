@@ -45,7 +45,7 @@ func (s *store) GetToken(ctx context.Context, user string, id int64) (*dbo.Token
 	if err != nil {
 		return nil, fmt.Errorf("get token: %w", err)
 	}
-	return tokenViewToDomain(row), nil
+	return mapToken(row), nil
 }
 
 func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) {
@@ -53,7 +53,7 @@ func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) 
 	if err != nil {
 		return nil, fmt.Errorf("get token by id: %w", err)
 	}
-	return tokenViewToDomain(row), nil
+	return mapToken(row), nil
 }
 
 func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([]*dbo.Token, error) {
@@ -67,7 +67,7 @@ func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([
 		}
 		out := make([]*dbo.Token, 0, len(rows))
 		for _, r := range rows {
-			out = append(out, tokenViewToDomain(r))
+			out = append(out, mapToken(r))
 		}
 		return out, nil
 	}
@@ -77,7 +77,7 @@ func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([
 	}
 	out := make([]*dbo.Token, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, tokenViewToDomain(r))
+		out = append(out, mapToken(r))
 	}
 	return out, nil
 }
@@ -201,7 +201,7 @@ func (s *store) ListAllTokens(ctx context.Context) ([]*dbo.Token, error) {
 	}
 	out := make([]*dbo.Token, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, tokenViewToDomain(r))
+		out = append(out, mapToken(r))
 	}
 	return out, nil
 }
@@ -259,11 +259,10 @@ func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Pro
 	}, nil
 }
 
-func tokenViewToDomain(row TokenView) *dbo.Token {
-	kid := row.KeyID
+func mapToken(row TokenView) *dbo.Token {
 	return &dbo.Token{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		KeyID: &kid, Hash: row.Hash, User: row.User, Label: row.Label,
+		KeyID: &row.KeyID, Hash: row.Hash, User: row.User, Label: row.Label,
 		Path: row.Path, Host: row.Host, Headers: row.Headers,
 		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
