@@ -27,9 +27,6 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -37,16 +34,19 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          install-only: true
-
       - name: Build frontend
         run: |
           cd web/admin-ui
           npm install
           npm run build
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
 
   build:
     name: Test
