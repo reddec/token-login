@@ -152,12 +152,14 @@ func (kid KeyID) String() string {
 }
 
 func (kid *KeyID) Scan(value any) error {
-	str, ok := value.(string)
-	if !ok {
+	switch v := value.(type) {
+	case string:
+		return kid.UnmarshalText([]byte(v))
+	case []byte:
+		return kid.UnmarshalText(v)
+	default:
 		return errKeyIDType
 	}
-
-	return kid.UnmarshalText([]byte(str))
 }
 
 func (kid KeyID) Value() (driver.Value, error) {

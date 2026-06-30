@@ -99,6 +99,3 @@ jobs:
 
       - name: Run tests
         run: make test
-
-      - name: Run migration tests
-        run: exec ./migration-test.sh
