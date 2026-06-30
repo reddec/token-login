@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/types"
@@ -25,7 +24,7 @@ func (s *store) Close() error {
 }
 
 func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
-	row, err := s.q.CreateToken(ctx, CreateTokenParams{
+	id, err := s.q.CreateToken(ctx, CreateTokenParams{
 		KeyID:     *p.KeyID,
 		Hash:      p.Hash,
 		User:      p.User,
@@ -38,9 +37,7 @@ func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.
 	if err != nil {
 		return nil, fmt.Errorf("create token: %w", err)
 	}
-	return tokenToDomain(row.ID, row.CreatedAt, row.UpdatedAt, row.KeyID, row.Hash,
-		row.User, row.Label, row.Path, row.Host, row.Headers,
-		row.ProjectID, row.Requests, row.LastAccessAt, ""), nil
+	return s.GetTokenByID(ctx, id)
 }
 
 func (s *store) GetToken(ctx context.Context, user string, id int64) (*dbo.Token, error) {
@@ -273,18 +270,3 @@ func tokenViewToDomain(row TokenView) *dbo.Token {
 	}
 }
 
-func tokenToDomain(
-	id int64, createdAt, updatedAt time.Time, keyID types.KeyID, hash []byte,
-	user, label, path, host string, headers types.Headers,
-	projectID int64, requests int64, lastAccessAt time.Time,
-	projectSlug string,
-) *dbo.Token {
-	kid := keyID
-	return &dbo.Token{
-		ID: id, CreatedAt: createdAt, UpdatedAt: updatedAt,
-		KeyID: &kid, Hash: hash, User: user, Label: label,
-		Path: path, Host: host, Headers: headers,
-		ProjectID: projectID, ProjectSlug: projectSlug,
-		Requests: requests, LastAccessAt: lastAccessAt,
-	}
-}

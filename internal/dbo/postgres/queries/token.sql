@@ -16,7 +16,7 @@ SELECT * FROM token_view;
 -- name: CreateToken :one
 INSERT INTO token (key_id, hash, "user", label, path, host, headers, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING *;
+RETURNING id;
 
 -- name: UpdateToken :execrows
 UPDATE token

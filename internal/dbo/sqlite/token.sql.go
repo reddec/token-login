@@ -15,7 +15,7 @@ import (
 const createToken = `-- name: CreateToken :one
 INSERT INTO token (key_id, hash, user, label, path, host, headers, project_id)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id
+RETURNING id
 `
 
 type CreateTokenParams struct {
@@ -29,7 +29,7 @@ type CreateTokenParams struct {
 	ProjectID int64         `json:"project_id"`
 }
 
-func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token, error) {
+func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, createToken,
 		arg.KeyID,
 		arg.Hash,
@@ -40,23 +40,9 @@ func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (Token
 		arg.Headers,
 		arg.ProjectID,
 	)
-	var i Token
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.KeyID,
-		&i.Hash,
-		&i.User,
-		&i.Label,
-		&i.Path,
-		&i.Host,
-		&i.Headers,
-		&i.Requests,
-		&i.LastAccessAt,
-		&i.ProjectID,
-	)
-	return i, err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteToken = `-- name: DeleteToken :execrows
