@@ -32,7 +32,21 @@ var errUnsupportedScheme = errors.New("unsupported database scheme")
 func Open(ctx context.Context, rawURL string, hook func(db *sql.DB)) (dbo.Store, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("parse DSN: %w", err)
+		// url.Parse rejects non-standard authorities like ":memory:" (treated
+		// as invalid port). For in-memory SQLite DSNs, construct the URL
+		// manually so openSQLite can transform it into the file::memory:…
+		// connection string that modernc.org/sqlite expects.
+		if !strings.Contains(rawURL, ":memory:") {
+			return nil, fmt.Errorf("parse DSN: %w", err)
+		}
+		u = new(url.URL)
+		if before, _, ok := strings.Cut(rawURL, "://"); ok {
+			u.Scheme = before
+		}
+		u.Host = ":memory:"
+		if _, after, ok := strings.Cut(rawURL, "?"); ok {
+			u.RawQuery = after
+		}
 	}
 	switch u.Scheme {
 	case "sqlite", "sqlite3", "file":
