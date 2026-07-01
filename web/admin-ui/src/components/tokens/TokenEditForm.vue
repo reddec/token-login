@@ -102,14 +102,14 @@ function removeHeader(index: number) {
 }
 
 function syncHeaders() {
-  props.config.headers = customHeaders
+  const headers = customHeaders
     .filter((h) => h.name.trim() !== '')
     .map((h) => ({ name: h.name, value: h.value }))
+  emit('update:config', { ...props.config, headers })
 }
 
 function update(key: keyof FormConfig, value: string | number | string[] | undefined) {
-  ;(props.config as any)[key] = value
-  emit('update:config', { ...props.config })
+  emit('update:config', { ...props.config, [key]: value })
 }
 </script>
 

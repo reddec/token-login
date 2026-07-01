@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotifications } from '@/stores/notifications'
-import { getErrorMessage } from '@/lib/api-error'
+import { getErrorMessage, getResponseStatus } from '@/lib/api-error'
 const { notify } = useNotifications()
 
 import { getToken, updateToken, deleteToken, refreshToken, listProjects } from '@/api'
@@ -25,7 +25,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { ArrowLeft, Save, RefreshCw, Trash2 } from '@lucide/vue'
+import { ArrowLeft, Key, RefreshCw, Save, Trash2 } from '@lucide/vue'
 
 const props = defineProps<{ id: string }>()
 const router = useRouter()
@@ -73,8 +73,8 @@ async function load() {
       notFound.value = true
     }
     projects.value = projectsRes.data ?? []
-  } catch (e: any) {
-    if (e?.response?.status === 404) {
+  } catch (e) {
+    if (getResponseStatus(e) === 404) {
       notFound.value = true
     } else {
       notify(getErrorMessage(e, 'Failed to load token'), 'error')
@@ -141,6 +141,16 @@ const breadcrumbLabel = computed(() => {
   return `${token.value.label || 'Token #' + token.value.id} (${token.value.keyID})`
 })
 
+const projectUrl = computed(() => {
+  if (!token.value) return '#/projects'
+  return `#/projects/${token.value.projectId}`
+})
+
+const projectLabel = computed(() => {
+  if (!token.value) return ''
+  return token.value.projectSlug || `Project #${token.value.projectId}`
+})
+
 onMounted(load)
 
 onUnmounted(() => {
@@ -176,11 +186,14 @@ onUnmounted(() => {
       @dismiss="savedCredential = null"
     />
 
-    <!-- Breadcrumb -->
     <Breadcrumb class="mb-6">
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink href="#/tokens">Tokens</BreadcrumbLink>
+          <BreadcrumbLink href="#/projects">Projects</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink :href="projectUrl">{{ projectLabel }}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
@@ -190,6 +203,11 @@ onUnmounted(() => {
     </Breadcrumb>
 
     <PageHeader :title="breadcrumbLabel">
+      <template #icon>
+        <div class="size-10 rounded-lg bg-muted flex items-center justify-center">
+          <Key class="size-5" />
+        </div>
+      </template>
       <template #actions>
         <Button variant="outline" size="sm" @click="router.push({ name: 'tokens' })">
           <ArrowLeft class="size-4" />

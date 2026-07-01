@@ -24,3 +24,18 @@ export function getErrorMessage(e: unknown, fallback = 'An unexpected error occu
   }
   return fallback
 }
+
+/**
+ * Safely extract an HTTP status from an error thrown by @hey-api/client-fetch.
+ * Returns undefined when the error has no recognizable response shape.
+ */
+export function getResponseStatus(e: unknown): number | undefined {
+  if (!(e && typeof e === 'object' && 'response' in e)) {
+    return undefined
+  }
+  const response = e.response
+  if (!(response && typeof response === 'object' && 'status' in response)) {
+    return undefined
+  }
+  return typeof response.status === 'number' ? response.status : undefined
+}

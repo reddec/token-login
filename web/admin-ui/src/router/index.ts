@@ -13,7 +13,7 @@ const router = createRouter({
       component: () => import('@/views/ProjectList.vue'),
     },
     {
-      path: '/projects/:id',
+      path: '/projects/:id/:tab?',
       name: 'project-detail',
       component: () => import('@/views/ProjectDetail.vue'),
       props: true,

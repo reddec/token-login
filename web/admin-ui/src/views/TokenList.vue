@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   uniqueNamesGenerator,
@@ -10,6 +10,7 @@ import {
 import { useNotifications } from '@/stores/notifications'
 import { getErrorMessage } from '@/lib/api-error'
 const { notify } = useNotifications()
+import { useTokenSearch } from '@/composables/useTokenSearch'
 
 import { listTokens, createToken, listProjects } from '@/api'
 import type { Token, Project, TokenConfig } from '@/api'
@@ -38,7 +39,7 @@ const tokens = ref<Token[]>([])
 const projects = ref<Project[]>([])
 const loading = ref(true)
 const error = ref(false)
-const searchQuery = ref('')
+const { searchQuery, filtered } = useTokenSearch(tokens)
 
 const createDialogOpen = ref(false)
 const creating = ref(false)
@@ -69,18 +70,6 @@ async function load() {
   }
 }
 
-const filtered = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return tokens.value
-  return tokens.value.filter(
-    (t) =>
-      t.label.toLowerCase().includes(q) ||
-      t.keyID.toLowerCase().includes(q) ||
-      t.hosts?.some(h => h.toLowerCase().includes(q)) ||
-      t.paths?.some(p => p.toLowerCase().includes(q)) ||
-      t.projectSlug?.toLowerCase().includes(q),
-  )
-})
 
 function openCreateDialog() {
   newConfig.label = uniqueNamesGenerator({
@@ -158,7 +147,6 @@ onMounted(load)
       <Input
         v-model="searchQuery"
         placeholder="Search tokens by label, key, host, path, or project..."
-        class="max-w-md"
       />
     </div>
 

@@ -33,7 +33,7 @@ async function load() {
   }
 }
 
-function onCreated(_project: Project) {
+function onCreated() {
   createOpen.value = false
   load()
 }

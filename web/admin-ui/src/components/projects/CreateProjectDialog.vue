@@ -6,6 +6,12 @@ const { notify } = useNotifications()
 
 import { createProject } from '@/api'
 import type { Project, ProjectConfig } from '@/api'
+import {
+  uniqueNamesGenerator,
+  adjectives,
+  colors,
+  animals,
+} from 'unique-names-generator'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,6 +71,12 @@ function handleOpenChange(val: boolean) {
     config.slug = ''
     config.description = ''
     slugError.value = ''
+  } else {
+    config.slug = uniqueNamesGenerator({
+      dictionaries: [adjectives, colors, animals],
+      separator: '-',
+      length: 2,
+    })
   }
   emit('update:open', val)
 }

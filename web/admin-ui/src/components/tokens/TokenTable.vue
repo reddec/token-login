@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Token } from '@/api'
 import {
   Table,
@@ -13,12 +14,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Eye } from '@lucide/vue'
 
-defineProps<{
+const props = defineProps<{
   tokens: Token[]
   loading?: boolean
+  showProject?: boolean
 }>()
 
 const SKELETON_ROWS = 5
+const colspan = computed(() => (props.showProject === false ? 6 : 7))
 </script>
 
 <template>
@@ -28,7 +31,7 @@ const SKELETON_ROWS = 5
         <TableRow>
           <TableHead>Label</TableHead>
           <TableHead>Key ID</TableHead>
-          <TableHead>Project</TableHead>
+          <TableHead v-if="showProject !== false">Project</TableHead>
           <TableHead>Host</TableHead>
           <TableHead>Path</TableHead>
           <TableHead class="text-right">Requests</TableHead>
@@ -38,14 +41,14 @@ const SKELETON_ROWS = 5
       <TableBody>
         <template v-if="loading">
           <TableRow v-for="i in SKELETON_ROWS" :key="i">
-            <TableCell v-for="j in 7" :key="j">
+            <TableCell v-for="j in colspan" :key="j">
               <Skeleton class="h-4 w-full" />
             </TableCell>
           </TableRow>
         </template>
         <template v-else-if="tokens.length === 0">
           <TableRow>
-            <TableCell colspan="7" class="text-center text-muted-foreground py-8">
+            <TableCell :colspan="colspan" class="text-center text-muted-foreground py-8">
               No tokens found.
             </TableCell>
           </TableRow>
@@ -65,7 +68,7 @@ const SKELETON_ROWS = 5
                 {{ token.keyID }}
               </Badge>
             </TableCell>
-            <TableCell>
+            <TableCell v-if="showProject !== false">
               <a v-if="token.projectId" :href="'#/projects/' + token.projectId">
                 <Badge variant="outline" class="text-xs hover:bg-accent transition-colors">
                   {{ token.projectSlug || '(default)' }}
