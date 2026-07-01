@@ -10,10 +10,10 @@ import (
 
 func TestValidator_Valid(t *testing.T) {
 
-	demo := genKey("", "/**")
-	demo2 := genKey("", "/hello")
-	demo3 := genKey("example.com", "/**")
-	demo4 := genKey("*.example.com", "/**")
+	demo := genKey([]string{""}, []string{"/**"})
+	demo2 := genKey([]string{""}, []string{"/hello"})
+	demo3 := genKey([]string{"example.com"}, []string{"/**"})
+	demo4 := genKey([]string{"*.example.com"}, []string{"/**"})
 
 	t.Run("basic test is ok", func(t *testing.T) {
 		ok := demo.AccessKey.Valid("", "/", demo.Secret.Payload())
@@ -57,22 +57,54 @@ func TestValidator_Valid(t *testing.T) {
 		ok := demo4.AccessKey.Valid("example.com", "/something", demo4.Secret.Payload())
 		require.False(t, ok)
 	})
+
+	t.Run("multi host globs match any", func(t *testing.T) {
+		multi := genKey([]string{"*.example.com", "*.test.com"}, []string{"/**"})
+		ok := multi.AccessKey.Valid("foo.example.com", "/anything", multi.Secret.Payload())
+		assert.True(t, ok)
+		ok = multi.AccessKey.Valid("bar.test.com", "/anything", multi.Secret.Payload())
+		assert.True(t, ok)
+		ok = multi.AccessKey.Valid("baz.other.com", "/anything", multi.Secret.Payload())
+		assert.False(t, ok)
+	})
+
+	t.Run("multi path globs match any", func(t *testing.T) {
+		multi := genKey([]string{"**"}, []string{"/api/**", "/admin/**"})
+		ok := multi.AccessKey.Valid("example.com", "/api/v1/foo", multi.Secret.Payload())
+		assert.True(t, ok)
+		ok = multi.AccessKey.Valid("example.com", "/admin/users", multi.Secret.Payload())
+		assert.True(t, ok)
+		ok = multi.AccessKey.Valid("example.com", "/public", multi.Secret.Payload())
+		assert.False(t, ok)
+	})
+
+	t.Run("empty host list matches any host", func(t *testing.T) {
+		empty := genKey(nil, []string{"/**"})
+		ok := empty.AccessKey.Valid("any-host.com", "/something", empty.Secret.Payload())
+		assert.True(t, ok)
+	})
+
+	t.Run("empty path list matches any path", func(t *testing.T) {
+		empty := genKey([]string{"**"}, nil)
+		ok := empty.AccessKey.Valid("example.com", "/any/path", empty.Secret.Payload())
+		assert.True(t, ok)
+	})
 }
 
-func mustAccessKey(hash []byte, host, path string) *types.AccessKey {
-	v, err := types.NewAccessKey(hash, host, path)
+func mustAccessKey(hash []byte, hosts, paths []string) *types.AccessKey {
+	v, err := types.NewAccessKey(hash, hosts, paths)
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func genKey(host, path string) *testKey {
+func genKey(hosts, paths []string) *testKey {
 	raw, err := types.NewKey()
 	if err != nil {
 		panic(err)
 	}
-	accessKey := mustAccessKey(raw.Hash(), host, path)
+	accessKey := mustAccessKey(raw.Hash(), hosts, paths)
 
 	return &testKey{
 		Secret:    raw,

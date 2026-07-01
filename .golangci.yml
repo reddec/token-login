@@ -1,23 +1,71 @@
+version: "2"
+
 run:
   tests: false
+
 linters:
-  enable-all: true
+  default: all
   disable:
-    - goerr113
-    - contextcheck
-    - exhaustivestruct
-    - wrapcheck
-    - varnamelen
-    - exhaustruct
+    - errcheck
+    - tagalign
+    - noinlineerr
+    - nlreturn
     - lll
     - wsl
-    - nlreturn
-    - gofumpt
-    - funlen
-    - gci
-    - nonamedreturns
-    - interfacer
-    - maligned
-    - tagalign
+    - wsl_v5
+    - gocognit
     - depguard
-    - structcheck
+    - cyclop
+    - exhaustruct
+    - tagliatelle
+    - varnamelen
+    - funcorder
+    - ireturn
+    - interfacebloat
+    - goconst
+    - funlen
+    - nonamedreturns
+    - mnd
+    - revive
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - web/admin-ui/node_modules
+    rules:
+      - linters:
+          - gosec
+        path: internal/utils/utils.go
+        text: "G124"
+      - linters:
+          - gosec
+        path: internal/dbo/open/open.go
+        text: "G104"
+      - linters:
+          - contextcheck
+        path: cmd/token-login/main.go
+        text: "Non-inherited new context"
+      - linters:
+          - recvcheck
+        path: internal/types/types.go
+        text: "KeyID"
+      - linters:
+          - recvcheck
+        path: internal/types/types.go
+        text: "Headers"
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - node_modules$

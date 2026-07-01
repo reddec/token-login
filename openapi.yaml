@@ -6,10 +6,89 @@ info:
 servers:
   - url: "/api/v1"
 paths:
+  /projects:
+    get:
+      operationId: listProjects
+      description: List all projects
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+
+    post:
+      operationId: createProject
+      description: Create new project
+      requestBody:
+        description: Project parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectConfig"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{project}:
+    parameters:
+      - in: path
+        name: project
+        description: Project ID
+        schema:
+          type: integer
+        required: true
+
+    get:
+      operationId: getProject
+      description: Get project by ID
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+    patch:
+      operationId: updateProject
+      description: Update project. Supports partial update.
+      requestBody:
+        description: Project parameters
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectPatch"
+      responses:
+        204:
+          description: OK
+
+    delete:
+      operationId: deleteProject
+      description: Delete project
+      responses:
+        204:
+          description: OK
+
   /tokens:
     get:
       operationId: listTokens
       description: List all tokens for user
+      parameters:
+        - in: query
+          name: project
+          description: Filter tokens by project ID
+          schema:
+            type: integer
       responses:
         200:
           description: OK
@@ -29,7 +108,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Config"
+              $ref: "#/components/schemas/TokenConfig"
       responses:
         200:
           description: OK
@@ -79,7 +158,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Config"
+              $ref: "#/components/schemas/TokenPatch"
       responses:
         204:
           description: OK
@@ -93,6 +172,54 @@ paths:
 
 components:
   schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique project ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Time when project was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Time when project was last updated
+        slug:
+          type: string
+          description: Unique project slug (path and query friendly)
+        description:
+          type: string
+          description: Project description
+      required:
+        - id
+        - createdAt
+        - updatedAt
+        - slug
+        - description
+
+    ProjectPatch:
+      type: object
+      properties:
+        description:
+          type: string
+          description: Project description
+
+    ProjectConfig:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: Unique project slug (path and query friendly)
+          pattern: '^[a-zA-Z0-9-_]+$'
+          maxLength: 255
+        description:
+          type: string
+          description: Project description
+      required:
+        - slug
+
     NameValue:
       type: object
       properties:
@@ -119,29 +246,66 @@ components:
         - id
         - key
 
-    Config:
+    TokenPatch:
       type: object
       properties:
         label:
           type: string
           description: Custom token description
           maxLength: 127
-        host:
-          type: string
-          description: Allowed hosts. Supports globs. Empty means "allow all"
-          example: "*.example.com"
-          maxLength: 255
-        path:
-          type: string
-          description: Allowed path. Supports globs. Empty means "allow all"
-          example: "/**"
-          maxLength: 2048
+        hosts:
+          type: array
+          items:
+            type: string
+            maxLength: 255
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+            maxLength: 2048
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
         headers:
           type: array
           maxItems: 20
           items:
             $ref: "#/components/schemas/NameValue"
           description: Custom headers which will be added after successfull authorization
+
+    TokenConfig:
+      type: object
+      properties:
+        label:
+          type: string
+          description: Custom token description
+          maxLength: 127
+        hosts:
+          type: array
+          items:
+            type: string
+            maxLength: 255
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+            maxLength: 2048
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
+        headers:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/NameValue"
+          description: Custom headers which will be added after successfull authorization
+        projectId:
+          type: integer
+          description: Project ID this token belongs to
+      required:
+        - projectId
 
     Token:
       type: object
@@ -170,14 +334,24 @@ components:
         label:
           type: string
           description: Custom token description
-        host:
+        hosts:
+          type: array
+          items:
+            type: string
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
+        projectId:
+          type: integer
+          description: ID of the project this token belongs to
+        projectSlug:
           type: string
-          description: Allowed hosts. Supports globs. Empty means "allow all"
-          example: "*.example.com"
-        path:
-          type: string
-          description: Allowed path. Supports globs. Empty means "allow all"
-          example: "/**"
+          description: Slug of the project this token belongs to
         headers:
           type: array
           items:
@@ -194,6 +368,8 @@ components:
         - keyID
         - user
         - label
-        - host
-        - path
+        - hosts
+        - paths
+        - projectId
+        - projectSlug
         - requests

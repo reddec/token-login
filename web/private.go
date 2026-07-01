@@ -15,13 +15,14 @@ const (
 	TokenHeader         = `X-Token`
 	HostHeader          = "X-Forwarded-Host"
 	TokenQuery          = `token`
+	ProjectQuery        = `project`
 	AuthUserHeader      = `X-User`
 	AuthTokenHintHeader = `X-Token-Hint` //nolint:gosec
 )
 
 type Hit struct {
 	Time time.Time
-	ID   int
+	ID   int64
 }
 
 func AuthHandler(state *cache.Cache, accessLog chan<- Hit) http.Handler {
@@ -44,6 +45,16 @@ func AuthHandler(state *cache.Cache, accessLog chan<- Hit) http.Handler {
 		token, found := state.FindByKey(key.ID())
 		if !found {
 			slog.Debug("token not found", "key", key.ID())
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		projectSlug := requestURL.Query().Get(ProjectQuery) // defaults to ""
+		// NOTE: project filtering is done in-memory after cache lookup.
+		// For large deployments with many projects, consider pushing this
+		// filter to the DB/cache layer to avoid loading all tokens.
+		if token.DBToken.ProjectSlug != projectSlug {
+			slog.Debug("project mismatch", "key", key.ID(), "expected", projectSlug, "actual", token.DBToken.ProjectSlug)
 			writer.WriteHeader(http.StatusUnauthorized)
 			return
 		}

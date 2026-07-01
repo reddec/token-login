@@ -4,7 +4,7 @@
     }
 
     handle /* {
-        forward_auth http://tokens:8081 {
+        forward_auth http://tokens:8080 {
             uri /auth                        # anything
             header_up X-Forwarded-Uri {uri}  # pass original URI
             header_up +X-Token               # pass token (optional) to token-login

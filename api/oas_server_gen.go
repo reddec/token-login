@@ -8,42 +8,72 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// CreateProject implements createProject operation.
+	//
+	// Create new project.
+	//
+	// POST /projects
+	CreateProject(ctx context.Context, req *ProjectConfig) (*Project, error)
 	// CreateToken implements createToken operation.
 	//
 	// Create new token for user.
 	//
 	// POST /tokens
-	CreateToken(ctx context.Context, req *Config) (*Credential, error)
+	CreateToken(ctx context.Context, req *TokenConfig) (*Credential, error)
+	// DeleteProject implements deleteProject operation.
+	//
+	// Delete project.
+	//
+	// DELETE /projects/{project}
+	DeleteProject(ctx context.Context, params DeleteProjectParams) error
 	// DeleteToken implements deleteToken operation.
 	//
 	// Delete token for user.
 	//
 	// DELETE /tokens/{token}
 	DeleteToken(ctx context.Context, params DeleteTokenParams) error
+	// GetProject implements getProject operation.
+	//
+	// Get project by ID.
+	//
+	// GET /projects/{project}
+	GetProject(ctx context.Context, params GetProjectParams) (*Project, error)
 	// GetToken implements getToken operation.
 	//
 	// Get tokens by ID and for the current user.
 	//
 	// GET /tokens/{token}
 	GetToken(ctx context.Context, params GetTokenParams) (*Token, error)
+	// ListProjects implements listProjects operation.
+	//
+	// List all projects.
+	//
+	// GET /projects
+	ListProjects(ctx context.Context) ([]Project, error)
 	// ListTokens implements listTokens operation.
 	//
 	// List all tokens for user.
 	//
 	// GET /tokens
-	ListTokens(ctx context.Context) ([]Token, error)
+	ListTokens(ctx context.Context, params ListTokensParams) ([]Token, error)
 	// RefreshToken implements refreshToken operation.
 	//
 	// Regenerate token key.
 	//
 	// POST /tokens/{token}
 	RefreshToken(ctx context.Context, params RefreshTokenParams) (*Credential, error)
+	// UpdateProject implements updateProject operation.
+	//
+	// Update project. Supports partial update.
+	//
+	// PATCH /projects/{project}
+	UpdateProject(ctx context.Context, req *ProjectPatch, params UpdateProjectParams) error
 	// UpdateToken implements updateToken operation.
 	//
 	// Update token for user. Supports partial update.
 	//
 	// PATCH /tokens/{token}
-	UpdateToken(ctx context.Context, req *Config, params UpdateTokenParams) error
+	UpdateToken(ctx context.Context, req *TokenPatch, params UpdateTokenParams) error
 }
 
 // Server implements http server based on OpenAPI v3 specification and

@@ -21,19 +21,27 @@ standalone application, as part of container deployment (e.g., docker-compose), 
 
 Since 1.2.0 token-login offers a comprehensive secure [API](openapi.yaml) with full parity to UI.
 
-**main page**
+**Projects** — organize tokens by application or environment:
 
-![main](https://github.com/reddec/token-login/assets/6597086/4d73e838-f135-4c47-9ed2-39c06e572341)
+![Projects](docs/screenshots/projects.png)
 
-**details**
+**Project detail** — edit a project and inspect its tokens inline:
 
-![details](https://github.com/reddec/token-login/assets/6597086/d8b06c71-23b1-4684-a034-1ad72c27d1a3)
+![Project detail](docs/screenshots/project-detail.png)
+
+**Tokens** — every token across projects, with live usage stats:
+
+![Tokens](docs/screenshots/tokens.png)
+
+**Token detail** — host/path glob rules, custom headers, and request history:
+
+![Token detail](docs/screenshots/token-detail.png)
 
 ## Installation
 
 Quick & dirty run for local environment (UI will be available on http://127.0.0.1:8080, `admin/admin`)
 
-    docker run --rm -p 8080:8080 -p 8081:8081 ghcr.io/reddec/token-login
+    docker run --rm -p 8080:8080 ghcr.io/reddec/token-login
 
 ### Binary
 
@@ -42,7 +50,7 @@ Pre-built binary releases for most major platforms (Linux/Windows/Mac) for AMD64
 
 ## From source
 
-Requires Go 1.20+
+Requires Go 1.26+
 
     go install github.com/reddec/token-login/cmd/...@latest
 
@@ -145,27 +153,16 @@ Author: Aleksandr Baryshnikov <owner@reddec.net>
 Application Options:
       --login=[basic|oidc|proxy]   Login method for admin UI (default: basic) [$LOGIN]
 
-Admin server configuration:
-      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
-      --admin.tls                  Enable TLS [$ADMIN_TLS]
-      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
-      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
-      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
-      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
-      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
-      --admin.read-header-timeout= How long to read header from the request (default: 3s) [$ADMIN_READ_HEADER_TIMEOUT]
-      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
-
-Auth server configuration:
-      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
-      --auth.tls                   Enable TLS [$AUTH_TLS]
-      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
-      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
-      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
-      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
-      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
-      --auth.read-header-timeout=  How long to read header from the request (default: 3s) [$AUTH_READ_HEADER_TIMEOUT]
-      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+    HTTP server configuration:
+      --http.bind=                Bind address (default: :8080) [$HTTP_BIND]
+      --http.tls                  Enable TLS [$HTTP_TLS]
+      --http.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$HTTP_CA]
+      --http.cert=                Server certificate (default: cert.pem) [$HTTP_CERT]
+      --http.key=                 Server private key (default: key.pem) [$HTTP_KEY]
+      --http.mutual               Enable mutual TLS [$HTTP_MUTUAL]
+      --http.ignore-system-ca     Do not load system-wide CA [$HTTP_IGNORE_SYSTEM_CA]
+      --http.read-header-timeout= How long to read header from the request (default: 3s) [$HTTP_READ_HEADER_TIMEOUT]
+      --http.graceful=            Graceful shutdown timeout (default: 5s) [$HTTP_GRACEFUL]
 
 OIDC login config:
       --oidc.client-id=            Client ID [$OIDC_CLIENT_ID]
@@ -174,6 +171,9 @@ OIDC login config:
       --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
       --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
       --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+      --oidc.scopes=               Additional OAuth scopes (default: openid profile email) [$OIDC_SCOPES]
+      --oidc.session-ttl=          Session TTL (default: 168h) [$OIDC_SESSION_TTL]
+      --oidc.trust-proxy           Trust X-Forwarded-* headers for redirect URL detection [$OIDC_TRUST_PROXY]
 
 OIDC Redis session configuration:
       --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
@@ -231,50 +231,49 @@ For example, dump stats every minute:
 
 ## HTTP server
 
-Token-login provides two HTTP servers: one for the administrator user interface (Admin UI) and one for forward
-authentication (Auth). Both servers can be configured in the same way and share the same default values, except for the
-binding addresses. The default address for Admin UI is `:8080`, while for Auth it is `:8081`.
+Token-login provides a single HTTP server serving the administrator user interface (Admin UI), REST API, forward
+authentication, and health check. The default bind address is `:8080`.
 
-HTTP servers support TLS, which is enabled by using the `--tls` flag. This feature is disabled by default. There is also
-an option to ignore system certificates by using the `--ignore-system-ca` flag. This can be useful in untrusted or
-minimalistic environments. Additionally, mutual TLS (`--mutual`) can be used for added security between participants.
+The server listens on the `--http.bind` address (default `:8080`) and serves all endpoints:
+- `/health` — health check (returns 204)
+- `/auth` — forward-auth endpoint for reverse proxies
+- `/api/v1/` — REST API for token management
+- `/` — Admin UI (embedded SPA)
 
-During normal shutdown, the server will be up to `--graceful` timeout, which is set to 5 seconds by default, before
-forcefully killing existing connections.
+HTTP server supports TLS, which is enabled by using the `--http.tls` flag. This feature is disabled by default.
+There is also an option to ignore system certificates by using the `--http.ignore-system-ca` flag. This can be
+useful in untrusted or minimalistic environments. Additionally, mutual TLS (`--http.mutual`) can be used for added
+security between participants.
 
-The Auth server has an endpoint for health checks (`/health`), which returns a 204 status code. This can be used to
-verify the server's status.
+During normal shutdown, the server will be up to `--http.graceful` timeout, which is set to 5 seconds by default,
+before forcefully killing existing connections.
 
-    Admin server configuration:
-      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
-      --admin.tls                  Enable TLS [$ADMIN_TLS]
-      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
-      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
-      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
-      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
-      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
-      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
+    HTTP server configuration:
+      --http.bind=                Bind address (default: :8080) [$HTTP_BIND]
+      --http.tls                  Enable TLS [$HTTP_TLS]
+      --http.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$HTTP_CA]
+      --http.cert=                Server certificate (default: cert.pem) [$HTTP_CERT]
+      --http.key=                 Server private key (default: key.pem) [$HTTP_KEY]
+      --http.mutual               Enable mutual TLS [$HTTP_MUTUAL]
+      --http.ignore-system-ca     Do not load system-wide CA [$HTTP_IGNORE_SYSTEM_CA]
+      --http.read-header-timeout= How long to read header from the request (default: 3s) [$HTTP_READ_HEADER_TIMEOUT]
+      --http.graceful=            Graceful shutdown timeout (default: 5s) [$HTTP_GRACEFUL]
 
-    Auth server configuration:
-      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
-      --auth.tls                   Enable TLS [$AUTH_TLS]
-      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
-      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
-      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
-      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
-      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
-      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+For example, to increase graceful shutdown to 1 minute:
 
-For example, to increase Auth server graceful shutdown to 1 minute:
+    token-login --http.graceful 1m
 
-    token-login --auth.graceful 1m
 
 ## Storage
 
-Token-login can be used with popular databases like SQLite or Postgres, and automatically manages schema migration.
+Token-login supports **SQLite** (cgo-free, pure Go) and **PostgreSQL**. MySQL support has been dropped.
 
-You can easily specify the database type by including the corresponding schema in the URL. For example, use `sqlite://`
-for SQLite, `postgres://` for PostgreSQL, and `mysql://` for MySQL.
+Database migrations are handled automatically on startup via versioned SQL migrations. The minimum version required
+for upgrade is **v1.0.0** — earlier versions cannot be migrated directly.
+
+Specify the database type by including the corresponding scheme in the URL:
+- `sqlite://` for SQLite (default)
+- `postgres://` for PostgreSQL
 
 By default, token-login uses a SQLite database stored locally in the file `data.sqlite`.
 
@@ -282,13 +281,13 @@ The default values for advanced parameters should suffice for most use cases, bu
 using the `--help` command to view the available options in the "Database Configuration" section.
 
      Database configuration:
-      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared) [$DB_URL]
+      --db.url=                    Database URL (default: sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)) [$DB_URL]
       --db.max-conn=               Maximum number of opened connections to database (default: 10) [$DB_MAX_CONN]
       --db.idle-conn=              Maximum number of idle connections to database (default: 1) [$DB_IDLE_CONN]
       --db.idle-timeout=           Maximum amount of time a connection may be idle (default: 0) [$DB_IDLE_TIMEOUT]
       --db.conn-life-time=         Maximum amount of time a connection may be reused (default: 0) [$DB_CONN_LIFE_TIME]
 
-For example with Postgres (user and password `postgress`, host - `db`):
+For example with Postgres (user and password `postgres`, host - `db`):
 
     token-login --db.url "postgres://postgres:postgres@db"
 
@@ -386,6 +385,9 @@ OIDC login config:
       --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
       --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
       --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+      --oidc.scopes=               Additional OAuth scopes (default: openid profile email) [$OIDC_SCOPES]
+      --oidc.session-ttl=          Session TTL (default: 168h) [$OIDC_SESSION_TTL]
+      --oidc.trust-proxy           Trust X-Forwarded-* headers for redirect URL detection [$OIDC_TRUST_PROXY]
 
 OIDC Redis session configuration:
       --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
@@ -497,7 +499,7 @@ must be hashed via bcrypt2.
 
 A token consists of two distinct parts. The first part comprises 8 bytes of randomly generated data, which are securely
 generated and placed at the beginning of the token. The second part comprises 32 bytes of randomly generated data that
-have been hashed using the SHA-384 algorithm. The raw value of private part is known only during the token generation
+have been hashed using the SHA3-384 algorithm. The raw value of private part is known only during the token generation
 process and is stored irreversibly hashed in both the database and cache. The public part of the token, known as the "
 key hint" or "key id," functions as a unique identifier (think about it as username) that is used to locate the
 corresponding private key in the database. The key ID is system-wide unique; the uniqueness is checked during the token
@@ -507,7 +509,7 @@ User token representation is token encoded in Base32 without padding. Case-**ins
 
 ### Security
 
-The tokens are irreversibly hashed using SHA-384 for security reasons. Although SHA-384 is not a key derivation
+The tokens are irreversibly hashed using SHA3-384 for security reasons. Although SHA3-384 is not a key derivation
 function (KDF), it provides a secure hash of the original token, which is generated from a crypto-secure pure-random
 32-byte source with around 2^256 entropy. This makes it practically impossible to brute force the token within a
 reasonable time frame, without requiring the use of a KDF, which is typically used for key-space limited sources such as
@@ -568,6 +570,24 @@ make snapshot
 ```
 
 # Changelog
+
+## 2.0.0
+
+- **Projects:** tokens are now scoped to projects — organize tokens by project, manage them from the project detail page
+- **Tokens:** multi-host and multi-path support — tokens can match multiple host/path globs
+- **Database:** migrated from Ent ORM to sqlc + sql-migrate — versioned SQL migrations replace auto-migration
+- **Database:** minimum upgrade version is v1.0.0; MySQL support dropped (SQLite + PostgreSQL only)
+- **Database:** SQLite uses cgo-free pure-Go driver (modernc.org/sqlite)
+- **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
+- **Server:** consolidated into a single HTTP server on `:8080` — the auth server (`:8081`) is removed; forward-auth served at `/auth`
+- **Server:** `--admin.*` / `$ADMIN_*` renamed to `--http.*` / `$HTTP_*`; `--auth.*` / `$AUTH_*` removed
+- **Docker:** single `EXPOSE 8080`; `-p 8081:8081` no longer needed
+- **Reverse proxies:** target `http://tokens:8080` for forward-auth (Caddy/Nginx: add `/auth` path)
+- **OIDC:** new `--oidc.scopes` / `OIDC_SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid profile email`)
+- **OIDC:** new `--oidc.session-ttl` / `OIDC_SESSION_TTL` flag — session lifetime (default: `168h`)
+- **OIDC:** new `--oidc.trust-proxy` / `OIDC_TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
+- OIDC: session encryption enabled, proactive token refresh at half TTL
+- Minimum Go version: 1.26
 
 ## 1.2.0
 

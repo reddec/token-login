@@ -1,0 +1,303 @@
+package sqlite
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+
+	"github.com/reddec/token-login/internal/dbo"
+	"github.com/reddec/token-login/internal/types"
+)
+
+type store struct {
+	db *sql.DB
+	q  *Queries
+}
+
+// NewStore wraps a *sql.DB in a dbo.Store implementation backed by SQLite.
+func NewStore(db *sql.DB) dbo.Store {
+	return &store{db: db, q: New(db)}
+}
+
+func (s *store) Close() error {
+	if err := s.db.Close(); err != nil {
+		return fmt.Errorf("close db: %w", err)
+	}
+	return nil
+}
+
+func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
+	hostsJSON, err := json.Marshal(p.Hosts)
+	if err != nil {
+		return nil, fmt.Errorf("marshal hosts: %w", err)
+	}
+	pathsJSON, err := json.Marshal(p.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("marshal paths: %w", err)
+	}
+	id, err := s.q.CreateToken(ctx, CreateTokenParams{
+		KeyID:     *p.KeyID,
+		Hash:      p.Hash,
+		User:      p.User,
+		Label:     p.Label,
+		Paths:     string(pathsJSON),
+		Hosts:     string(hostsJSON),
+		Headers:   p.Headers,
+		ProjectID: p.ProjectID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create token: %w", err)
+	}
+	return s.GetTokenByID(ctx, id)
+}
+
+func (s *store) GetToken(ctx context.Context, user string, id int64) (*dbo.Token, error) {
+	row, err := s.q.GetToken(ctx, GetTokenParams{User: user, ID: id})
+	if err != nil {
+		return nil, fmt.Errorf("get token: %w", err)
+	}
+	return mapToken(row)
+}
+
+func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) {
+	row, err := s.q.GetTokenByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get token by id: %w", err)
+	}
+	return mapToken(row)
+}
+
+func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([]*dbo.Token, error) {
+	if projectID != 0 {
+		rows, err := s.q.ListTokensByUserAndProject(ctx, ListTokensByUserAndProjectParams{
+			User:      user,
+			ProjectID: projectID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("list tokens by project: %w", err)
+		}
+		out := make([]*dbo.Token, 0, len(rows))
+		for _, r := range rows {
+			tok, err := mapToken(r)
+			if err != nil {
+				slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+				continue
+			}
+			out = append(out, tok)
+		}
+		return out, nil
+	}
+	rows, err := s.q.ListTokens(ctx, user)
+	if err != nil {
+		return nil, fmt.Errorf("list tokens: %w", err)
+	}
+	out := make([]*dbo.Token, 0, len(rows))
+	for _, r := range rows {
+		tok, err := mapToken(r)
+		if err != nil {
+			slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+			continue
+		}
+		out = append(out, tok)
+	}
+	return out, nil
+}
+
+func (s *store) UpdateToken(ctx context.Context, p dbo.UpdateTokenParams) (int64, error) {
+	current, err := s.q.GetToken(ctx, GetTokenParams{User: p.User, ID: p.ID})
+	if err != nil {
+		return 0, fmt.Errorf("get token for update: %w", err)
+	}
+	var hosts, paths []string
+	if err := json.Unmarshal([]byte(current.Hosts), &hosts); err != nil {
+		return 0, fmt.Errorf("unmarshal hosts for token %d: %w", p.ID, err)
+	}
+	if err := json.Unmarshal([]byte(current.Paths), &paths); err != nil {
+		return 0, fmt.Errorf("unmarshal paths for token %d: %w", p.ID, err)
+	}
+	label := current.Label
+	headers := current.Headers
+	if p.Hosts != nil {
+		hosts = *p.Hosts
+	}
+	if p.Paths != nil {
+		paths = *p.Paths
+	}
+	if p.Label != nil {
+		label = *p.Label
+	}
+	if p.Headers != nil {
+		headers = *p.Headers
+	}
+	hostsJSON, merr := json.Marshal(hosts)
+	if merr != nil {
+		return 0, fmt.Errorf("marshal hosts for token %d: %w", p.ID, merr)
+	}
+	pathsJSON, merr := json.Marshal(paths)
+	if merr != nil {
+		return 0, fmt.Errorf("marshal paths for token %d: %w", p.ID, merr)
+	}
+	return s.q.UpdateToken(ctx, UpdateTokenParams{
+		Hosts:   string(hostsJSON),
+		Paths:   string(pathsJSON),
+		Label:   label,
+		Headers: headers,
+		User:    p.User,
+		ID:      p.ID,
+	})
+}
+
+func (s *store) DeleteToken(ctx context.Context, user string, id int64) (int64, error) {
+	return s.q.DeleteToken(ctx, DeleteTokenParams{User: user, ID: id})
+}
+
+func (s *store) RefreshToken(ctx context.Context, user string, id int64, hash []byte, keyID *types.KeyID) (int64, error) {
+	return s.q.RefreshToken(ctx, RefreshTokenParams{
+		Hash:  hash,
+		KeyID: *keyID,
+		User:  user,
+		ID:    id,
+	})
+}
+
+func (s *store) CreateProject(ctx context.Context, p dbo.CreateProjectParams) (*dbo.Project, error) {
+	row, err := s.q.CreateProject(ctx, CreateProjectParams{
+		User:        p.User,
+		Slug:        p.Slug,
+		Description: p.Description,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create project: %w", err)
+	}
+	return &dbo.Project{
+		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		User: row.User, Slug: row.Slug, Description: row.Description,
+	}, nil
+}
+
+func (s *store) GetProject(ctx context.Context, user string, id int64) (*dbo.Project, error) {
+	row, err := s.q.GetProject(ctx, GetProjectParams{User: user, ID: id})
+	if err != nil {
+		return nil, fmt.Errorf("get project: %w", err)
+	}
+	return &dbo.Project{
+		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		User: row.User, Slug: row.Slug, Description: row.Description,
+	}, nil
+}
+
+func (s *store) ListProjects(ctx context.Context, user string) ([]*dbo.Project, error) {
+	rows, err := s.q.ListProjects(ctx, user)
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	out := make([]*dbo.Project, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, &dbo.Project{
+			ID: r.ID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+			User: r.User, Slug: r.Slug, Description: r.Description,
+		})
+	}
+	return out, nil
+}
+
+func (s *store) UpdateProject(ctx context.Context, p dbo.UpdateProjectParams) (int64, error) {
+	return s.q.UpdateProject(ctx, UpdateProjectParams{
+		Description: p.Description,
+		User:        p.User,
+		ID:          p.ID,
+	})
+}
+
+func (s *store) DeleteProject(ctx context.Context, user string, id int64) ([]int64, error) {
+	tokenIDs, err := s.q.ListTokenIDsByProject(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("list token ids: %w", err)
+	}
+	if _, err := s.q.DeleteProject(ctx, DeleteProjectParams{User: user, ID: id}); err != nil {
+		return nil, fmt.Errorf("delete project: %w", err)
+	}
+	return tokenIDs, nil
+}
+
+func (s *store) ProjectExists(ctx context.Context, user string, id int64) (bool, error) {
+	ok, err := s.q.ProjectExists(ctx, ProjectExistsParams{User: user, ID: id})
+	if err != nil {
+		return false, fmt.Errorf("check project exists: %w", err)
+	}
+	return ok, nil
+}
+
+func (s *store) ListAllTokens(ctx context.Context) ([]*dbo.Token, error) {
+	rows, err := s.q.ListAllTokens(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list all tokens: %w", err)
+	}
+	out := make([]*dbo.Token, 0, len(rows))
+	for _, r := range rows {
+		tok, err := mapToken(r)
+		if err != nil {
+			slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+			continue
+		}
+		out = append(out, tok)
+	}
+	return out, nil
+}
+
+func (s *store) ListAllProjects(ctx context.Context) ([]*dbo.Project, error) {
+	rows, err := s.q.ListAllProjects(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list all projects: %w", err)
+	}
+	out := make([]*dbo.Project, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, &dbo.Project{
+			ID: r.ID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+			User: r.User, Slug: r.Slug, Description: r.Description,
+		})
+	}
+	return out, nil
+}
+
+func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	q := s.q.WithTx(tx)
+	for id, entry := range stats {
+		if err := q.UpdateTokenStats(ctx, UpdateTokenStatsParams{
+			Requests:     entry.Hits,
+			LastAccessAt: entry.Last,
+			ID:           id,
+		}); err != nil {
+			return fmt.Errorf("update stats for %d: %w", id, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
+	}
+	return nil
+}
+
+func mapToken(row TokenView) (*dbo.Token, error) {
+	var hosts, paths []string
+	if err := json.Unmarshal([]byte(row.Hosts), &hosts); err != nil {
+		return nil, fmt.Errorf("unmarshal hosts for token %d: %w", row.ID, err)
+	}
+	if err := json.Unmarshal([]byte(row.Paths), &paths); err != nil {
+		return nil, fmt.Errorf("unmarshal paths for token %d: %w", row.ID, err)
+	}
+	return &dbo.Token{
+		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		KeyID: &row.KeyID, Hash: row.Hash, User: row.User, Label: row.Label,
+		Paths: paths, Hosts: hosts, Headers: row.Headers,
+		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
+		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
+	}, nil
+}

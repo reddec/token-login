@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexedwards/scs/redisstore"
-	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -24,16 +22,15 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/jessevdk/go-flags"
 	oidclogin "github.com/reddec/oidc-login"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/reddec/token-login/api"
 	"github.com/reddec/token-login/internal/cache"
-	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/dbo/open"
 	"github.com/reddec/token-login/internal/plumbing"
+	"github.com/reddec/token-login/internal/redisstore"
 	"github.com/reddec/token-login/internal/server"
 	"github.com/reddec/token-login/internal/utils"
-
 	"github.com/reddec/token-login/web"
+	"golang.org/x/crypto/bcrypt"
 )
 
 //nolint:gochecknoglobals
@@ -42,17 +39,19 @@ var (
 	commit  = "none"
 	date    = "unknown"
 	builtBy = "unknown"
+
+	errCALoadFailed    = errors.New("CA certs failed to load")
+	errEmailNotAllowed = errors.New("email not allowed")
 )
 
 type Config struct {
-	Admin Server    `group:"Admin server configuration" namespace:"admin" env-namespace:"ADMIN"`
-	Auth  Server    `group:"Auth server configuration" namespace:"auth" env-namespace:"AUTH"`
+	HTTP  Server    `group:"HTTP server configuration" namespace:"http" env-namespace:"HTTP"`
 	Login string    `long:"login" env:"LOGIN" description:"Login method for admin UI" default:"basic" choice:"basic" choice:"oidc" choice:"proxy"`
 	OIDC  OIDC      `group:"OIDC login config" namespace:"oidc" env-namespace:"OIDC"`
 	Basic Basic     `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
 	Proxy ProxyAuth `group:"Proxy login config" namespace:"proxy" env-namespace:"PROXY"`
 	DB    struct {
-		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)"`
+		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite"`
 		MaxConn      int           `long:"max-conn" env:"MAX_CONN" description:"Maximum number of opened connections to database" default:"10"`
 		IdleConn     int           `long:"idle-conn" env:"IDLE_CONN" description:"Maximum number of idle connections to database" default:"1"`
 		IdleTimeout  time.Duration `long:"idle-timeout" env:"IDLE_TIMEOUT" description:"Maximum amount of time a connection may be idle" default:"0"`
@@ -71,7 +70,6 @@ type Config struct {
 	} `group:"Debug" namespace:"debug" env-namespace:"DEBUG"`
 }
 
-//nolint:maligned
 type Server struct {
 	Bind              string        `long:"bind" env:"BIND" description:"Bind address"`
 	TLS               bool          `long:"tls" env:"TLS" description:"Enable TLS"`
@@ -97,8 +95,11 @@ type OIDC struct {
 		MaxIdle     int           `long:"max-idle" env:"MAX_IDLE" description:"Maximum number of idle connections" default:"1"`
 		IdleTimeout time.Duration `long:"idle-timeout" env:"IDLE_TIMEOUT" description:"Close connections after remaining idle for this duration" default:"30s"`
 	} `group:"OIDC Redis session configuration" namespace:"redis" env-namespace:"REDIS"`
-	ServerURL string   `long:"server-url" env:"SERVER_URL" description:"(optional) public server URL for redirects"`
-	Emails    []string `long:"emails" env:"EMAILS" description:"Allowed emails (enabled if at least one set)" env-delim:","`
+	ServerURL  string        `long:"server-url" env:"SERVER_URL" description:"(optional) public server URL for redirects"`
+	Emails     []string      `long:"emails" env:"EMAILS" description:"Allowed emails (enabled if at least one set)" env-delim:","`
+	Scopes     []string      `long:"scopes" env:"SCOPES" description:"Additional OAuth scopes (default: openid profile email)" env-delim:","`
+	SessionTTL time.Duration `long:"session-ttl" env:"SESSION_TTL" description:"Session TTL" default:"168h"`
+	TrustProxy bool          `long:"trust-proxy" env:"TRUST_PROXY" description:"Trust X-Forwarded-* headers for redirect URL detection"`
 }
 
 type Basic struct {
@@ -109,8 +110,7 @@ type Basic struct {
 
 func main() {
 	var config Config
-	config.Admin.Bind = ":8080"
-	config.Auth.Bind = ":8081"
+	config.HTTP.Bind = ":8080"
 
 	parser := flags.NewParser(&config, flags.Default)
 	parser.ShortDescription = "token-login"
@@ -132,7 +132,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	config.setupLogging()
 
 	// setup db
-	store, err := ent.New(ctx, config.DB.URL, config.configureDatabase)
+	store, err := open.Open(ctx, config.DB.URL, config.configureDatabase)
 	if err != nil {
 		return fmt.Errorf("create store: %w", err)
 	}
@@ -174,18 +174,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		return nil
 	})
 
-	// setup auth server
-	wg.Go(func() error {
-		defer cancel()
-		router := chi.NewRouter()
-		router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
-			writer.WriteHeader(http.StatusNoContent)
-		})
-		router.Mount("/", web.AuthHandler(keysCache, hitsCache))
-		return config.Auth.Run(ctx, cancel, "auth server", router)
-	})
-
-	// setup Admin server
+	// setup HTTP server
 	router := chi.NewRouter()
 	if config.Debug.Enable {
 		router.Use(func(handler http.Handler) http.Handler {
@@ -201,6 +190,11 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	} else {
 		router.Use(withOWASPHeaders)
 	}
+	router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusNoContent)
+	})
+	router.Mount("/auth", web.AuthHandler(keysCache, hitsCache))
+
 	authMW := config.authMiddleware(ctx, router)
 
 	router.With(authMW).Route("/", func(r chi.Router) {
@@ -210,11 +204,12 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 
 	wg.Go(func() error {
 		defer cancel()
-		return config.Admin.Run(ctx, cancel, "admin server", router)
+		return config.HTTP.Run(ctx, cancel, "http server", router)
 	})
 	slog.Info("ready", "version", version, "debug", config.Debug.Enable)
 	<-ctx.Done()
 	cancel()
+	//nolint:wrapcheck // ErrorOrNil already returns a structured multierror
 	return wg.Wait().ErrorOrNil()
 }
 
@@ -264,6 +259,7 @@ func (srv *Server) Run(ctx context.Context, cancel context.CancelFunc, name stri
 		return httpServer.Shutdown(tctx)
 	})
 
+	//nolint:wrapcheck // ErrorOrNil already returns a structured multierror
 	return wg.Wait().ErrorOrNil()
 }
 
@@ -293,7 +289,7 @@ func (srv *Server) tlsConfig() (*tls.Config, error) {
 	}
 
 	// enable mTLS if needed
-	var clientAuth = tls.NoClientCert
+	clientAuth := tls.NoClientCert
 	if srv.Mutual {
 		clientAuth = tls.RequireAndVerifyClientCert
 	}
@@ -309,7 +305,6 @@ func (srv *Server) tlsConfig() (*tls.Config, error) {
 
 func (srv *Server) loadCA(ca *x509.CertPool) error {
 	caCert, err := os.ReadFile(srv.CA)
-
 	if err != nil {
 		if srv.IgnoreSystemCA {
 			// no system, no custom
@@ -321,7 +316,7 @@ func (srv *Server) loadCA(ca *x509.CertPool) error {
 
 	if !ca.AppendCertsFromPEM(caCert) {
 		if srv.IgnoreSystemCA {
-			return errors.New("CA certs failed to load")
+			return errCALoadFailed
 		}
 		slog.Warn("failed add custom CA to pool")
 	}
@@ -358,16 +353,57 @@ func (cfg Config) setupLogging() {
 }
 
 func (cfg *OIDC) emailsFilter() map[string]bool {
-	var ans = make(map[string]bool, len(cfg.Emails))
+	ans := make(map[string]bool, len(cfg.Emails))
 	for _, e := range cfg.Emails {
 		ans[strings.ToLower(e)] = true
 	}
 	return ans
 }
 
+type slogLogger struct{}
+
+func (slogLogger) Log(level oidclogin.Level, message string) {
+	switch level {
+	case oidclogin.LogError:
+		slog.Error(message)
+	case oidclogin.LogWarn:
+		slog.Warn(message)
+	case oidclogin.LogInfo:
+		slog.Info(message)
+	default:
+		slog.Info(message)
+	}
+}
+
 func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(handler http.Handler) http.Handler {
 	filter := cfg.emailsFilter()
-	var session *scs.SessionManager
+	oidcCfg := oidclogin.Config{
+		IssuerURL:     cfg.Issuer,
+		ClientID:      cfg.ClientID,
+		ClientSecret:  cfg.ClientSecret,
+		ServerURL:     cfg.ServerURL,
+		Scopes:        cfg.Scopes,
+		SessionTTL:    cfg.SessionTTL,
+		RefreshBefore: cfg.SessionTTL / 2,
+		TrustProxy:    cfg.TrustProxy,
+		Encrypted:     true,
+		Logger:        slogLogger{},
+		PostAuth: func(_ http.ResponseWriter, _ *http.Request, idToken *oidc.IDToken) error {
+			if len(cfg.Emails) == 0 {
+				return nil
+			}
+			var claims struct {
+				Email string `json:"email"`
+			}
+			if err := idToken.Claims(&claims); err != nil {
+				return fmt.Errorf("read claims: %w", err)
+			}
+			if !filter[strings.ToLower(claims.Email)] {
+				return fmt.Errorf("email %s not allowed: %w", claims.Email, errEmailNotAllowed)
+			}
+			return nil
+		},
+	}
 	if cfg.Session == "redis" {
 		pool := &redis.Pool{
 			Dial: func() (redis.Conn, error) {
@@ -383,36 +419,18 @@ func (cfg *OIDC) createMiddleware(ctx context.Context, router chi.Router) func(h
 			IdleTimeout: cfg.Redis.IdleTimeout,
 			Wait:        true,
 		}
-		session = scs.New()
-		session.Store = redisstore.New(pool)
+		oidcCfg.SessionStore = redisstore.New(pool)
 	}
-	login, err := oidclogin.New(ctx, oidclogin.Config{
-		IssuerURL:      cfg.Issuer,
-		ClientID:       cfg.ClientID,
-		ClientSecret:   cfg.ClientSecret,
-		ServerURL:      cfg.ServerURL,
-		SessionManager: session,
-		PostAuth: func(_ http.ResponseWriter, _ *http.Request, idToken *oidc.IDToken) error {
-			if len(cfg.Emails) == 0 {
-				return nil
-			}
-			email := oidclogin.Email(idToken)
-			if !filter[strings.ToLower(email)] {
-				return fmt.Errorf("email %s not allowed", email)
-			}
-			return nil
-		},
-	})
+	login, err := oidclogin.New(ctx, oidcCfg)
 	if err != nil {
 		panic(err)
 	}
 	router.Mount(oidclogin.Prefix, login)
 	return func(handler http.Handler) http.Handler {
-		return login.SecureFunc(func(writer http.ResponseWriter, request *http.Request) {
-			token := oidclogin.Token(request)
-			request = request.WithContext(utils.WithUser(request.Context(), oidclogin.User(token)))
+		return login.Secure(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			request = request.WithContext(utils.WithUser(request.Context(), oidclogin.User(request)))
 			handler.ServeHTTP(writer, request)
-		})
+		}))
 	}
 }
 
@@ -425,7 +443,6 @@ func (cfg *Basic) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 		writer.WriteHeader(http.StatusSeeOther)
 	})
 	return func(handler http.Handler) http.Handler {
-		//nolint:canonicalheader
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			if utils.GetFlash(writer, request, flash) == "true" {
 				writer.Header().Set("WWW-Authenticate", `Basic realm="`+cfg.Realm+`", charset="UTF-8"`)
@@ -482,7 +499,6 @@ func (na *NoAuth) createMiddleware(router chi.Router) func(http.Handler) http.Ha
 }
 
 func withOWASPHeaders(handler http.Handler) http.Handler {
-	//nolint:canonicalheader
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		headers := writer.Header()
 		headers.Set("X-Frame-Options", "DENY") // helps with click hijacking

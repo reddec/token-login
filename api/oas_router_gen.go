@@ -10,6 +10,21 @@ import (
 	"github.com/ogen-go/ogen/uri"
 )
 
+var (
+	rn1AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn5AllowedHeaders = map[string]string{
+		"PATCH": "Content-Type",
+	}
+	rn3AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn7AllowedHeaders = map[string]string{
+		"PATCH": "Content-Type",
+	}
+)
+
 func (s *Server) cutPrefix(path string) (string, bool) {
 	prefix := s.cfg.Prefix
 	if prefix == "" {
@@ -49,70 +64,168 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/tokens"
-			origElem := elem
-			if l := len("/tokens"); len(elem) >= l && elem[0:l] == "/tokens" {
+		case '/': // Prefix: "/"
+
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				switch r.Method {
-				case "GET":
-					s.handleListTokensRequest([0]string{}, elemIsEscaped, w, r)
-				case "POST":
-					s.handleCreateTokenRequest([0]string{}, elemIsEscaped, w, r)
-				default:
-					s.notAllowed(w, r, "GET,POST")
-				}
-
-				return
+				break
 			}
 			switch elem[0] {
-			case '/': // Prefix: "/"
-				origElem := elem
-				if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+			case 'p': // Prefix: "projects"
+
+				if l := len("projects"); len(elem) >= l && elem[0:l] == "projects" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
-				// Param: "token"
-				// Leaf parameter
-				args[0] = elem
-				elem = ""
-
 				if len(elem) == 0 {
-					// Leaf node.
 					switch r.Method {
-					case "DELETE":
-						s.handleDeleteTokenRequest([1]string{
-							args[0],
-						}, elemIsEscaped, w, r)
 					case "GET":
-						s.handleGetTokenRequest([1]string{
-							args[0],
-						}, elemIsEscaped, w, r)
-					case "PATCH":
-						s.handleUpdateTokenRequest([1]string{
-							args[0],
-						}, elemIsEscaped, w, r)
+						s.handleListProjectsRequest([0]string{}, elemIsEscaped, w, r)
 					case "POST":
-						s.handleRefreshTokenRequest([1]string{
-							args[0],
-						}, elemIsEscaped, w, r)
+						s.handleCreateProjectRequest([0]string{}, elemIsEscaped, w, r)
 					default:
-						s.notAllowed(w, r, "DELETE,GET,PATCH,POST")
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "GET,POST",
+							allowedHeaders: rn1AllowedHeaders,
+							acceptPost:     "application/json",
+							acceptPatch:    "",
+						})
 					}
 
 					return
 				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
 
-				elem = origElem
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "project"
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
+					args[0] = elem
+					elem = ""
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "DELETE":
+							s.handleDeleteProjectRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						case "GET":
+							s.handleGetProjectRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						case "PATCH":
+							s.handleUpdateProjectRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "DELETE,GET,PATCH",
+								allowedHeaders: rn5AllowedHeaders,
+								acceptPost:     "",
+								acceptPatch:    "application/json",
+							})
+						}
+
+						return
+					}
+
+				}
+
+			case 't': // Prefix: "tokens"
+
+				if l := len("tokens"); len(elem) >= l && elem[0:l] == "tokens" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					switch r.Method {
+					case "GET":
+						s.handleListTokensRequest([0]string{}, elemIsEscaped, w, r)
+					case "POST":
+						s.handleCreateTokenRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "GET,POST",
+							allowedHeaders: rn3AllowedHeaders,
+							acceptPost:     "application/json",
+							acceptPatch:    "",
+						})
+					}
+
+					return
+				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
+
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "token"
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
+					args[0] = elem
+					elem = ""
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "DELETE":
+							s.handleDeleteTokenRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						case "GET":
+							s.handleGetTokenRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						case "PATCH":
+							s.handleUpdateTokenRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						case "POST":
+							s.handleRefreshTokenRequest([1]string{
+								args[0],
+							}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "DELETE,GET,PATCH,POST",
+								allowedHeaders: rn7AllowedHeaders,
+								acceptPost:     "",
+								acceptPatch:    "application/json",
+							})
+						}
+
+						return
+					}
+
+				}
+
 			}
 
-			elem = origElem
 		}
 	}
 	s.notFound(w, r)
@@ -120,12 +233,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Route is route object.
 type Route struct {
-	name        string
-	summary     string
-	operationID string
-	pathPattern string
-	count       int
-	args        [1]string
+	name           string
+	summary        string
+	operationID    string
+	operationGroup string
+	pathPattern    string
+	count          int
+	args           [1]string
 }
 
 // Name returns ogen operation name.
@@ -143,6 +257,11 @@ func (r Route) Summary() string {
 // OperationID returns OpenAPI operationId.
 func (r Route) OperationID() string {
 	return r.operationID
+}
+
+// OperationGroup returns the x-ogen-operation-group value.
+func (r Route) OperationGroup() string {
+	return r.operationGroup
 }
 
 // PathPattern returns OpenAPI path.
@@ -193,97 +312,203 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/tokens"
-			origElem := elem
-			if l := len("/tokens"); len(elem) >= l && elem[0:l] == "/tokens" {
+		case '/': // Prefix: "/"
+
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				switch method {
-				case "GET":
-					r.name = "ListTokens"
-					r.summary = ""
-					r.operationID = "listTokens"
-					r.pathPattern = "/tokens"
-					r.args = args
-					r.count = 0
-					return r, true
-				case "POST":
-					r.name = "CreateToken"
-					r.summary = ""
-					r.operationID = "createToken"
-					r.pathPattern = "/tokens"
-					r.args = args
-					r.count = 0
-					return r, true
-				default:
-					return
-				}
+				break
 			}
 			switch elem[0] {
-			case '/': // Prefix: "/"
-				origElem := elem
-				if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+			case 'p': // Prefix: "projects"
+
+				if l := len("projects"); len(elem) >= l && elem[0:l] == "projects" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
-				// Param: "token"
-				// Leaf parameter
-				args[0] = elem
-				elem = ""
-
 				if len(elem) == 0 {
 					switch method {
-					case "DELETE":
-						// Leaf: DeleteToken
-						r.name = "DeleteToken"
-						r.summary = ""
-						r.operationID = "deleteToken"
-						r.pathPattern = "/tokens/{token}"
-						r.args = args
-						r.count = 1
-						return r, true
 					case "GET":
-						// Leaf: GetToken
-						r.name = "GetToken"
+						r.name = ListProjectsOperation
 						r.summary = ""
-						r.operationID = "getToken"
-						r.pathPattern = "/tokens/{token}"
+						r.operationID = "listProjects"
+						r.operationGroup = ""
+						r.pathPattern = "/projects"
 						r.args = args
-						r.count = 1
-						return r, true
-					case "PATCH":
-						// Leaf: UpdateToken
-						r.name = "UpdateToken"
-						r.summary = ""
-						r.operationID = "updateToken"
-						r.pathPattern = "/tokens/{token}"
-						r.args = args
-						r.count = 1
+						r.count = 0
 						return r, true
 					case "POST":
-						// Leaf: RefreshToken
-						r.name = "RefreshToken"
+						r.name = CreateProjectOperation
 						r.summary = ""
-						r.operationID = "refreshToken"
-						r.pathPattern = "/tokens/{token}"
+						r.operationID = "createProject"
+						r.operationGroup = ""
+						r.pathPattern = "/projects"
 						r.args = args
-						r.count = 1
+						r.count = 0
 						return r, true
 					default:
 						return
 					}
 				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
 
-				elem = origElem
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "project"
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
+					args[0] = elem
+					elem = ""
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "DELETE":
+							r.name = DeleteProjectOperation
+							r.summary = ""
+							r.operationID = "deleteProject"
+							r.operationGroup = ""
+							r.pathPattern = "/projects/{project}"
+							r.args = args
+							r.count = 1
+							return r, true
+						case "GET":
+							r.name = GetProjectOperation
+							r.summary = ""
+							r.operationID = "getProject"
+							r.operationGroup = ""
+							r.pathPattern = "/projects/{project}"
+							r.args = args
+							r.count = 1
+							return r, true
+						case "PATCH":
+							r.name = UpdateProjectOperation
+							r.summary = ""
+							r.operationID = "updateProject"
+							r.operationGroup = ""
+							r.pathPattern = "/projects/{project}"
+							r.args = args
+							r.count = 1
+							return r, true
+						default:
+							return
+						}
+					}
+
+				}
+
+			case 't': // Prefix: "tokens"
+
+				if l := len("tokens"); len(elem) >= l && elem[0:l] == "tokens" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					switch method {
+					case "GET":
+						r.name = ListTokensOperation
+						r.summary = ""
+						r.operationID = "listTokens"
+						r.operationGroup = ""
+						r.pathPattern = "/tokens"
+						r.args = args
+						r.count = 0
+						return r, true
+					case "POST":
+						r.name = CreateTokenOperation
+						r.summary = ""
+						r.operationID = "createToken"
+						r.operationGroup = ""
+						r.pathPattern = "/tokens"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
+
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "token"
+					// Leaf parameter, slashes are prohibited
+					idx := strings.IndexByte(elem, '/')
+					if idx >= 0 {
+						break
+					}
+					args[0] = elem
+					elem = ""
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "DELETE":
+							r.name = DeleteTokenOperation
+							r.summary = ""
+							r.operationID = "deleteToken"
+							r.operationGroup = ""
+							r.pathPattern = "/tokens/{token}"
+							r.args = args
+							r.count = 1
+							return r, true
+						case "GET":
+							r.name = GetTokenOperation
+							r.summary = ""
+							r.operationID = "getToken"
+							r.operationGroup = ""
+							r.pathPattern = "/tokens/{token}"
+							r.args = args
+							r.count = 1
+							return r, true
+						case "PATCH":
+							r.name = UpdateTokenOperation
+							r.summary = ""
+							r.operationID = "updateToken"
+							r.operationGroup = ""
+							r.pathPattern = "/tokens/{token}"
+							r.args = args
+							r.count = 1
+							return r, true
+						case "POST":
+							r.name = RefreshTokenOperation
+							r.summary = ""
+							r.operationID = "refreshToken"
+							r.operationGroup = ""
+							r.pathPattern = "/tokens/{token}"
+							r.args = args
+							r.count = 1
+							return r, true
+						default:
+							return
+						}
+					}
+
+				}
+
 			}
 
-			elem = origElem
 		}
 	}
 	return r, false

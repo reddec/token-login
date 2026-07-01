@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
-      - "traefik.http.middlewares.tokens-auth.forwardauth.address=http://tokens:8081"
+      - "traefik.http.middlewares.tokens-auth.forwardauth.address=http://tokens:8080/auth"
       # proxy all X- headers from tokens to upstream
       - "traefik.http.middlewares.tokens-auth.forwardauth.authResponseHeadersRegex=^X-"
       - "traefik.http.routers.backend.middlewares=tokens-auth@docker"

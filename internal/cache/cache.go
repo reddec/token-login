@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reddec/token-login/internal/ent"
+	"github.com/reddec/token-login/internal/dbo"
 	"github.com/reddec/token-login/internal/types"
 )
 
@@ -15,19 +15,19 @@ type State map[types.KeyID]*Token
 
 type Token struct {
 	AccessKey *types.AccessKey
-	DBToken   *ent.Token
+	DBToken   *dbo.Token
 }
 
 type Cache struct {
-	client *ent.Client
-	state  struct {
+	store dbo.Store
+	state struct {
 		data State
 		lock sync.RWMutex
 	}
 }
 
-func New(client *ent.Client) *Cache {
-	v := &Cache{client: client}
+func New(store dbo.Store) *Cache {
+	v := &Cache{store: store}
 	v.state.data = make(State)
 	return v
 }
@@ -51,7 +51,7 @@ func (v *Cache) Drop(id int) {
 	v.state.lock.Lock()
 	defer v.state.lock.Unlock()
 	for k, a := range v.state.data {
-		if a.DBToken.ID == id {
+		if a.DBToken.ID == int64(id) {
 			delete(v.state.data, k)
 			break
 		}
@@ -83,7 +83,7 @@ func (v *Cache) PollKeys(ctx context.Context, interval time.Duration) {
 }
 
 func (v *Cache) SyncKeys(ctx context.Context) error {
-	all, err := v.client.Token.Query().All(ctx)
+	all, err := v.store.ListAllTokens(ctx)
 	if err != nil {
 		return fmt.Errorf("query all tokens: %w", err)
 	}
@@ -91,7 +91,7 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 	state := make(State, len(all))
 
 	for _, t := range all {
-		ak, err := types.NewAccessKey(t.Hash, t.Host, t.Path)
+		ak, err := types.NewAccessKey(t.Hash, t.Hosts, t.Paths)
 		if err != nil {
 			slog.Warn("failed to create access key", "id", t.ID, "user", t.User, "error", err)
 			continue
@@ -108,12 +108,12 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 }
 
 func (v *Cache) SyncKey(ctx context.Context, id int) error {
-	t, err := v.client.Token.Get(ctx, id)
+	t, err := v.store.GetTokenByID(ctx, int64(id))
 	if err != nil {
 		return fmt.Errorf("get token %v: %w", id, err)
 	}
 
-	aKey, err := types.NewAccessKey(t.Hash, t.Host, t.Path)
+	aKey, err := types.NewAccessKey(t.Hash, t.Hosts, t.Paths)
 	if err != nil {
 		return fmt.Errorf("create access key %v: %w", id, err)
 	}

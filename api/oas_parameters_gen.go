@@ -7,13 +7,78 @@ import (
 	"net/url"
 
 	"github.com/go-faster/errors"
-
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/uri"
 	"github.com/ogen-go/ogen/validate"
 )
+
+// DeleteProjectParams is parameters of deleteProject operation.
+type DeleteProjectParams struct {
+	// Project ID.
+	Project int
+}
+
+func unpackDeleteProjectParams(packed middleware.Parameters) (params DeleteProjectParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "project",
+			In:   "path",
+		}
+		params.Project = packed[key].(int)
+	}
+	return params
+}
+
+func decodeDeleteProjectParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteProjectParams, _ error) {
+	// Decode path: project.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "project",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.Project = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "project",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
 
 // DeleteTokenParams is parameters of deleteToken operation.
 type DeleteTokenParams struct {
@@ -74,6 +139,72 @@ func decodeDeleteTokenParams(args [1]string, argsEscaped bool, r *http.Request) 
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "token",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetProjectParams is parameters of getProject operation.
+type GetProjectParams struct {
+	// Project ID.
+	Project int
+}
+
+func unpackGetProjectParams(packed middleware.Parameters) (params GetProjectParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "project",
+			In:   "path",
+		}
+		params.Project = packed[key].(int)
+	}
+	return params
+}
+
+func decodeGetProjectParams(args [1]string, argsEscaped bool, r *http.Request) (params GetProjectParams, _ error) {
+	// Decode path: project.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "project",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.Project = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "project",
 			In:   "path",
 			Err:  err,
 		}
@@ -147,6 +278,71 @@ func decodeGetTokenParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 	return params, nil
 }
 
+// ListTokensParams is parameters of listTokens operation.
+type ListTokensParams struct {
+	// Filter tokens by project ID.
+	Project OptInt `json:",omitempty,omitzero"`
+}
+
+func unpackListTokensParams(packed middleware.Parameters) (params ListTokensParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "project",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Project = v.(OptInt)
+		}
+	}
+	return params
+}
+
+func decodeListTokensParams(args [0]string, argsEscaped bool, r *http.Request) (params ListTokensParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: project.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "project",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotProjectVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotProjectVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Project.SetTo(paramsDotProjectVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "project",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // RefreshTokenParams is parameters of refreshToken operation.
 type RefreshTokenParams struct {
 	// Token ID.
@@ -206,6 +402,72 @@ func decodeRefreshTokenParams(args [1]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "token",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateProjectParams is parameters of updateProject operation.
+type UpdateProjectParams struct {
+	// Project ID.
+	Project int
+}
+
+func unpackUpdateProjectParams(packed middleware.Parameters) (params UpdateProjectParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "project",
+			In:   "path",
+		}
+		params.Project = packed[key].(int)
+	}
+	return params
+}
+
+func decodeUpdateProjectParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateProjectParams, _ error) {
+	// Decode path: project.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "project",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.Project = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "project",
 			In:   "path",
 			Err:  err,
 		}

@@ -2,14 +2,14 @@ package types
 
 import (
 	"crypto/rand"
+	"crypto/sha3"
 	"database/sql/driver"
 	"encoding/base32"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -18,7 +18,11 @@ const (
 	TokenSize   = KeyIDSize + keyDataSize
 )
 
-var ErrKeySize = errors.New("key size invalid")
+var (
+	ErrKeySize    = errors.New("key size invalid")
+	errCannotScan = errors.New("cannot scan into Headers")
+	errKeyIDType  = errors.New("key ID type should be text")
+)
 
 type Header struct {
 	Name  string `json:"name"`
@@ -35,7 +39,7 @@ func (headers Headers) With(name, value string) Headers {
 }
 
 func (headers Headers) Without(name string) Headers {
-	var ans = make([]Header, 0, len(headers))
+	ans := make([]Header, 0, len(headers))
 	for i := range headers {
 		if headers[i].Name == name {
 			continue
@@ -43,6 +47,39 @@ func (headers Headers) Without(name string) Headers {
 		ans = append(ans, headers[i])
 	}
 	return ans
+}
+
+// Scan implements sql.Scanner for JSON headers stored as JSON/JSONB.
+func (headers *Headers) Scan(src any) error {
+	if src == nil {
+		*headers = nil
+		return nil
+	}
+	var data []byte
+	switch v := src.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return fmt.Errorf("cannot scan %T into Headers: %w", src, errCannotScan)
+	}
+	if err := json.Unmarshal(data, headers); err != nil {
+		return fmt.Errorf("unmarshal headers: %w", err)
+	}
+	return nil
+}
+
+// Value implements driver.Valuer for JSON headers.
+func (headers Headers) Value() (driver.Value, error) {
+	if headers == nil {
+		return []byte("[]"), nil
+	}
+	data, err := json.Marshal(headers)
+	if err != nil {
+		return nil, fmt.Errorf("marshal headers: %w", err)
+	}
+	return data, nil
 }
 
 func NewKey() (Key, error) {
@@ -86,8 +123,8 @@ func (rt Key) Hash() []byte {
 	return s[:]
 }
 
-func (rt Key) AccessKey(host, path string) (*AccessKey, error) {
-	return NewAccessKey(rt.Hash(), host, path)
+func (rt Key) AccessKey(hosts, paths []string) (*AccessKey, error) {
+	return NewAccessKey(rt.Hash(), hosts, paths)
 }
 
 type KeyID [KeyIDSize]byte
@@ -115,12 +152,14 @@ func (kid KeyID) String() string {
 }
 
 func (kid *KeyID) Scan(value any) error {
-	str, ok := value.(string)
-	if !ok {
-		return errors.New("key ID type should be text")
+	switch v := value.(type) {
+	case string:
+		return kid.UnmarshalText([]byte(v))
+	case []byte:
+		return kid.UnmarshalText(v)
+	default:
+		return errKeyIDType
 	}
-
-	return kid.UnmarshalText([]byte(str))
 }
 
 func (kid KeyID) Value() (driver.Value, error) {
