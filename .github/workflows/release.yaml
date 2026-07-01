@@ -48,7 +48,7 @@ jobs:
       - name: Build frontend
         run: |
           cd web/admin-ui
-          npm install
+          npm ci
           npm run build
 
       - name: Run GoReleaser
