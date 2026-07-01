@@ -21,13 +21,21 @@ standalone application, as part of container deployment (e.g., docker-compose), 
 
 Since 1.2.0 token-login offers a comprehensive secure [API](openapi.yaml) with full parity to UI.
 
-**main page**
+**Projects** — organize tokens by application or environment:
 
-![main](https://github.com/reddec/token-login/assets/6597086/4d73e838-f135-4c47-9ed2-39c06e572341)
+![Projects](docs/screenshots/projects.png)
 
-**details**
+**Project detail** — edit a project and inspect its tokens inline:
 
-![details](https://github.com/reddec/token-login/assets/6597086/d8b06c71-23b1-4684-a034-1ad72c27d1a3)
+![Project detail](docs/screenshots/project-detail.png)
+
+**Tokens** — every token across projects, with live usage stats:
+
+![Tokens](docs/screenshots/tokens.png)
+
+**Token detail** — host/path glob rules, custom headers, and request history:
+
+![Token detail](docs/screenshots/token-detail.png)
 
 ## Installation
 
