@@ -25,7 +25,7 @@ test:
 	go test -v ./...
 
 web/admin-ui/dist:
-	cd web/admin-ui && npm run build
+	cd web/admin-ui && npm ci && npm run build
 
 gen:
 	go generate ./...

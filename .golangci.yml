@@ -33,7 +33,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
-      - node_modules$
+      - web/admin-ui/node_modules
     rules:
       - linters:
           - gosec
