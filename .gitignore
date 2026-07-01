@@ -9,3 +9,4 @@
 /*.pdf
 /.goreleaser.local.yaml
 /test-data
+/token-login

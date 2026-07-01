@@ -6,14 +6,13 @@ Token-login is a **forward-auth server** for token-based authorization. It provi
 
 ## Architecture & Data Flow
 
-Two independent HTTP servers, wired in `cmd/token-login/main.go`:
+One HTTP server, wired in `cmd/token-login/main.go`:
 
-| Server  | Default port | Purpose |
-|---------|-------------|---------|
-| Admin   | `:8080`     | Admin UI (embedded SPA via `//go:embed`) + REST API (`/api/v1/`) |
-| Auth    | `:8081`     | Forward-auth endpoint (`/health` for readiness) |
+| Server | Default port | Purpose |
+|--------|-------------|---------|
+| HTTP   | `:8080`     | Admin UI + REST API (`/api/v1/`) + forward-auth (`/auth`) + health (`/health`) |
 
-**Auth flow**: Reverse proxy sends request metadata (host, path, token) to auth server → `web.AuthHandler` parses the key, looks up cache by `KeyID`, validates via `types.AccessKey.Valid()` (globs + SHA3-384 constant-time compare) → returns 204 with `X-User`, `X-Token-Hint`, and custom headers on success, 401 on failure.
+**Auth flow**: Reverse proxy sends request metadata (host, path, token) to the server → `web.AuthHandler` parses the key, looks up cache by `KeyID`, validates via `types.AccessKey.Valid()` (globs + SHA3-384 constant-time compare) → returns 204 with `X-User`, `X-Token-Hint`, and custom headers on success, 401 on failure.
 
 **Data flow**: `dbo.Store` (sqlc) → `cache.Cache` (in-memory, `map[types.KeyID]*cache.Token`, `sync.RWMutex`, polled every `cache.ttl`) → `web.AuthHandler`. Stats flow: `web.Hit` channel (buffer `stats.buffer`) → `plumbing.SyncStats` (aggregates hits + last-access time per interval) → DB transaction via `Store.UpdateStats`.
 
@@ -23,7 +22,7 @@ Two independent HTTP servers, wired in `cmd/token-login/main.go`:
 3. `server.New(store)` → `api.NewServer(srv)` (ogen-generated)
 4. `srv.OnRemove(keysCache.Drop)`, `srv.OnUpdate(keysCache.SyncKey)` — cache invalidation hooks
 5. Goroutines: cache polling (`PollKeys`), stats sync (`plumbing.SyncStats`)
-6. Two `chi` routers started via `Server.Run()` (graceful shutdown with TLS/mTLS support)
+6. One `chi` router started via `Server.Run()` (graceful shutdown with TLS/mTLS support)
 7. `multierror.Group` collects goroutine errors; `signal.NotifyContext` for graceful shutdown
 
 ## Key Directories
@@ -112,7 +111,7 @@ This is the sole mechanism for passing user identity through the API layer. Serv
 - Token keys: 40 bytes = 8-byte public `KeyID` (stored in DB) + 32-byte private payload (NOT stored in DB — only its SHA3-384 hash).
 - Validation uses `crypto/subtle.ConstantTimeCompare` for hash comparison.
 - Password auth uses bcrypt (`golang.org/x/crypto/bcrypt`).
-- OWASP security headers added to admin server in production mode (`X-Frame-Options`, `X-XSS-Protection`, `X-Content-Type-Options`, `Referrer-Policy`).
+- OWASP security headers added to the HTTP server in production mode (`X-Frame-Options`, `X-XSS-Protection`, `X-Content-Type-Options`, `Referrer-Policy`).
 - Debug mode (`--debug.enable`) enables CORS and request logging.
 
 ### Naming conventions
@@ -148,7 +147,7 @@ This is the sole mechanism for passing user identity through the API layer. Serv
 
 - **Go 1.26+** (see `go.mod`). Build with `CGO_ENABLED=0`, `-trimpath`.
 - **Node 20**, **npm** — frontend build (`web/admin-ui`). Svelte 4, Vite 5, TypeScript 5.
-- **Docker**: FROM scratch, binary ADDed to `/`. Exposes 8080, 8081. Volume `/data`.
+- **Docker**: FROM scratch, binary ADDed to `/`. Exposes 8080. Volume `/data`.
 - **Package manager**: Go modules (`go.mod`), npm for frontend.
 - **Codegen**: ogen v1.1.0 (Go server/client from OpenAPI), sqlc (type-safe SQL from queries), openapi-typescript-codegen (TS client).
 - **No external build system**: plain `Makefile` + `go generate`.

@@ -45,8 +45,7 @@ var (
 )
 
 type Config struct {
-	Admin Server    `group:"Admin server configuration" namespace:"admin" env-namespace:"ADMIN"`
-	Auth  Server    `group:"Auth server configuration" namespace:"auth" env-namespace:"AUTH"`
+	HTTP  Server    `group:"HTTP server configuration" namespace:"http" env-namespace:"HTTP"`
 	Login string    `long:"login" env:"LOGIN" description:"Login method for admin UI" default:"basic" choice:"basic" choice:"oidc" choice:"proxy"`
 	OIDC  OIDC      `group:"OIDC login config" namespace:"oidc" env-namespace:"OIDC"`
 	Basic Basic     `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
@@ -111,8 +110,7 @@ type Basic struct {
 
 func main() {
 	var config Config
-	config.Admin.Bind = ":8080"
-	config.Auth.Bind = ":8081"
+	config.HTTP.Bind = ":8080"
 
 	parser := flags.NewParser(&config, flags.Default)
 	parser.ShortDescription = "token-login"
@@ -176,18 +174,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 		return nil
 	})
 
-	// setup auth server
-	wg.Go(func() error {
-		defer cancel()
-		router := chi.NewRouter()
-		router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
-			writer.WriteHeader(http.StatusNoContent)
-		})
-		router.Mount("/", web.AuthHandler(keysCache, hitsCache))
-		return config.Auth.Run(ctx, cancel, "auth server", router)
-	})
-
-	// setup Admin server
+	// setup HTTP server
 	router := chi.NewRouter()
 	if config.Debug.Enable {
 		router.Use(func(handler http.Handler) http.Handler {
@@ -203,6 +190,11 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 	} else {
 		router.Use(withOWASPHeaders)
 	}
+	router.Get("/health", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusNoContent)
+	})
+	router.Mount("/auth", web.AuthHandler(keysCache, hitsCache))
+
 	authMW := config.authMiddleware(ctx, router)
 
 	router.With(authMW).Route("/", func(r chi.Router) {
@@ -212,7 +204,7 @@ func run(ctx context.Context, cancel context.CancelFunc, config Config) error {
 
 	wg.Go(func() error {
 		defer cancel()
-		return config.Admin.Run(ctx, cancel, "admin server", router)
+		return config.HTTP.Run(ctx, cancel, "http server", router)
 	})
 	slog.Info("ready", "version", version, "debug", config.Debug.Enable)
 	<-ctx.Done()

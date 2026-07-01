@@ -33,7 +33,7 @@ Since 1.2.0 token-login offers a comprehensive secure [API](openapi.yaml) with f
 
 Quick & dirty run for local environment (UI will be available on http://127.0.0.1:8080, `admin/admin`)
 
-    docker run --rm -p 8080:8080 -p 8081:8081 ghcr.io/reddec/token-login
+    docker run --rm -p 8080:8080 ghcr.io/reddec/token-login
 
 ### Binary
 
@@ -145,27 +145,16 @@ Author: Aleksandr Baryshnikov <owner@reddec.net>
 Application Options:
       --login=[basic|oidc|proxy]   Login method for admin UI (default: basic) [$LOGIN]
 
-Admin server configuration:
-      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
-      --admin.tls                  Enable TLS [$ADMIN_TLS]
-      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
-      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
-      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
-      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
-      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
-      --admin.read-header-timeout= How long to read header from the request (default: 3s) [$ADMIN_READ_HEADER_TIMEOUT]
-      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
-
-Auth server configuration:
-      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
-      --auth.tls                   Enable TLS [$AUTH_TLS]
-      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
-      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
-      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
-      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
-      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
-      --auth.read-header-timeout=  How long to read header from the request (default: 3s) [$AUTH_READ_HEADER_TIMEOUT]
-      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+    HTTP server configuration:
+      --http.bind=                Bind address (default: :8080) [$HTTP_BIND]
+      --http.tls                  Enable TLS [$HTTP_TLS]
+      --http.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$HTTP_CA]
+      --http.cert=                Server certificate (default: cert.pem) [$HTTP_CERT]
+      --http.key=                 Server private key (default: key.pem) [$HTTP_KEY]
+      --http.mutual               Enable mutual TLS [$HTTP_MUTUAL]
+      --http.ignore-system-ca     Do not load system-wide CA [$HTTP_IGNORE_SYSTEM_CA]
+      --http.read-header-timeout= How long to read header from the request (default: 3s) [$HTTP_READ_HEADER_TIMEOUT]
+      --http.graceful=            Graceful shutdown timeout (default: 5s) [$HTTP_GRACEFUL]
 
 OIDC login config:
       --oidc.client-id=            Client ID [$OIDC_CLIENT_ID]
@@ -234,43 +223,38 @@ For example, dump stats every minute:
 
 ## HTTP server
 
-Token-login provides two HTTP servers: one for the administrator user interface (Admin UI) and one for forward
-authentication (Auth). Both servers can be configured in the same way and share the same default values, except for the
-binding addresses. The default address for Admin UI is `:8080`, while for Auth it is `:8081`.
+Token-login provides a single HTTP server serving the administrator user interface (Admin UI), REST API, forward
+authentication, and health check. The default bind address is `:8080`.
 
-HTTP servers support TLS, which is enabled by using the `--tls` flag. This feature is disabled by default. There is also
-an option to ignore system certificates by using the `--ignore-system-ca` flag. This can be useful in untrusted or
-minimalistic environments. Additionally, mutual TLS (`--mutual`) can be used for added security between participants.
+The server listens on the `--http.bind` address (default `:8080`) and serves all endpoints:
+- `/health` — health check (returns 204)
+- `/auth` — forward-auth endpoint for reverse proxies
+- `/api/v1/` — REST API for token management
+- `/` — Admin UI (embedded SPA)
 
-During normal shutdown, the server will be up to `--graceful` timeout, which is set to 5 seconds by default, before
-forcefully killing existing connections.
+HTTP server supports TLS, which is enabled by using the `--http.tls` flag. This feature is disabled by default.
+There is also an option to ignore system certificates by using the `--http.ignore-system-ca` flag. This can be
+useful in untrusted or minimalistic environments. Additionally, mutual TLS (`--http.mutual`) can be used for added
+security between participants.
 
-The Auth server has an endpoint for health checks (`/health`), which returns a 204 status code. This can be used to
-verify the server's status.
+During normal shutdown, the server will be up to `--http.graceful` timeout, which is set to 5 seconds by default,
+before forcefully killing existing connections.
 
-    Admin server configuration:
-      --admin.bind=                Bind address (default: :8080) [$ADMIN_BIND]
-      --admin.tls                  Enable TLS [$ADMIN_TLS]
-      --admin.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$ADMIN_CA]
-      --admin.cert=                Server certificate (default: cert.pem) [$ADMIN_CERT]
-      --admin.key=                 Server private key (default: key.pem) [$ADMIN_KEY]
-      --admin.mutual               Enable mutual TLS [$ADMIN_MUTUAL]
-      --admin.ignore-system-ca     Do not load system-wide CA [$ADMIN_IGNORE_SYSTEM_CA]
-      --admin.graceful=            Graceful shutdown timeout (default: 5s) [$ADMIN_GRACEFUL]
+    HTTP server configuration:
+      --http.bind=                Bind address (default: :8080) [$HTTP_BIND]
+      --http.tls                  Enable TLS [$HTTP_TLS]
+      --http.ca=                  Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$HTTP_CA]
+      --http.cert=                Server certificate (default: cert.pem) [$HTTP_CERT]
+      --http.key=                 Server private key (default: key.pem) [$HTTP_KEY]
+      --http.mutual               Enable mutual TLS [$HTTP_MUTUAL]
+      --http.ignore-system-ca     Do not load system-wide CA [$HTTP_IGNORE_SYSTEM_CA]
+      --http.read-header-timeout= How long to read header from the request (default: 3s) [$HTTP_READ_HEADER_TIMEOUT]
+      --http.graceful=            Graceful shutdown timeout (default: 5s) [$HTTP_GRACEFUL]
 
-    Auth server configuration:
-      --auth.bind=                 Bind address (default: :8081) [$AUTH_BIND]
-      --auth.tls                   Enable TLS [$AUTH_TLS]
-      --auth.ca=                   Path to CA files. Optional unless IGNORE_SYSTEM_CA set (default: ca.pem) [$AUTH_CA]
-      --auth.cert=                 Server certificate (default: cert.pem) [$AUTH_CERT]
-      --auth.key=                  Server private key (default: key.pem) [$AUTH_KEY]
-      --auth.mutual                Enable mutual TLS [$AUTH_MUTUAL]
-      --auth.ignore-system-ca      Do not load system-wide CA [$AUTH_IGNORE_SYSTEM_CA]
-      --auth.graceful=             Graceful shutdown timeout (default: 5s) [$AUTH_GRACEFUL]
+For example, to increase graceful shutdown to 1 minute:
 
-For example, to increase Auth server graceful shutdown to 1 minute:
+    token-login --http.graceful 1m
 
-    token-login --auth.graceful 1m
 
 ## Storage
 
@@ -587,6 +571,10 @@ make snapshot
 - **Database:** minimum upgrade version is v1.0.0; MySQL support dropped (SQLite + PostgreSQL only)
 - **Database:** SQLite uses cgo-free pure-Go driver (modernc.org/sqlite)
 - **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
+- **Server:** consolidated into a single HTTP server on `:8080` — the auth server (`:8081`) is removed; forward-auth served at `/auth`
+- **Server:** `--admin.*` / `$ADMIN_*` renamed to `--http.*` / `$HTTP_*`; `--auth.*` / `$AUTH_*` removed
+- **Docker:** single `EXPOSE 8080`; `-p 8081:8081` no longer needed
+- **Reverse proxies:** target `http://tokens:8080` for forward-auth (Caddy/Nginx: add `/auth` path)
 - **OIDC:** new `--oidc.scopes` / `OIDC_SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid profile email`)
 - **OIDC:** new `--oidc.session-ttl` / `OIDC_SESSION_TTL` flag — session lifetime (default: `168h`)
 - **OIDC:** new `--oidc.trust-proxy` / `OIDC_TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
