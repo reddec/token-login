@@ -91,7 +91,7 @@ func (v *Cache) SyncKeys(ctx context.Context) error {
 	state := make(State, len(all))
 
 	for _, t := range all {
-		ak, err := types.NewAccessKey(t.Hash, t.Host, t.Path)
+		ak, err := types.NewAccessKey(t.Hash, t.Hosts, t.Paths)
 		if err != nil {
 			slog.Warn("failed to create access key", "id", t.ID, "user", t.User, "error", err)
 			continue
@@ -113,7 +113,7 @@ func (v *Cache) SyncKey(ctx context.Context, id int) error {
 		return fmt.Errorf("get token %v: %w", id, err)
 	}
 
-	aKey, err := types.NewAccessKey(t.Hash, t.Host, t.Path)
+	aKey, err := types.NewAccessKey(t.Hash, t.Hosts, t.Paths)
 	if err != nil {
 		return fmt.Errorf("create access key %v: %w", id, err)
 	}

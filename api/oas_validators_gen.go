@@ -109,6 +109,28 @@ func (s *Token) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if s.Hosts == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "hosts",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Paths == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "paths",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		var failures []validate.FieldError
 		for i, elem := range s.Headers {
 			if err := func() error {
@@ -176,7 +198,8 @@ func (s *TokenConfig) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Host.Get(); ok {
+		var failures []validate.FieldError
+		for i, elem := range s.Hosts {
 			if err := func() error {
 				if err := (validate.String{
 					MinLength:     0,
@@ -190,23 +213,30 @@ func (s *TokenConfig) Validate() error {
 					MinNumericSet: false,
 					MaxNumeric:    0,
 					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
+				}).Validate(string(elem)); err != nil {
 					return errors.Wrap(err, "string")
 				}
 				return nil
 			}(); err != nil {
-				return err
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
 			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "host",
+			Name:  "hosts",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Path.Get(); ok {
+		var failures []validate.FieldError
+		for i, elem := range s.Paths {
 			if err := func() error {
 				if err := (validate.String{
 					MinLength:     0,
@@ -220,18 +250,24 @@ func (s *TokenConfig) Validate() error {
 					MinNumericSet: false,
 					MaxNumeric:    0,
 					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
+				}).Validate(string(elem)); err != nil {
 					return errors.Wrap(err, "string")
 				}
 				return nil
 			}(); err != nil {
-				return err
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
 			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "path",
+			Name:  "paths",
 			Error: err,
 		})
 	}
@@ -314,7 +350,8 @@ func (s *TokenPatch) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Host.Get(); ok {
+		var failures []validate.FieldError
+		for i, elem := range s.Hosts {
 			if err := func() error {
 				if err := (validate.String{
 					MinLength:     0,
@@ -328,23 +365,30 @@ func (s *TokenPatch) Validate() error {
 					MinNumericSet: false,
 					MaxNumeric:    0,
 					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
+				}).Validate(string(elem)); err != nil {
 					return errors.Wrap(err, "string")
 				}
 				return nil
 			}(); err != nil {
-				return err
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
 			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "host",
+			Name:  "hosts",
 			Error: err,
 		})
 	}
 	if err := func() error {
-		if value, ok := s.Path.Get(); ok {
+		var failures []validate.FieldError
+		for i, elem := range s.Paths {
 			if err := func() error {
 				if err := (validate.String{
 					MinLength:     0,
@@ -358,18 +402,24 @@ func (s *TokenPatch) Validate() error {
 					MinNumericSet: false,
 					MaxNumeric:    0,
 					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
+				}).Validate(string(elem)); err != nil {
 					return errors.Wrap(err, "string")
 				}
 				return nil
 			}(); err != nil {
-				return err
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
 			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "path",
+			Name:  "paths",
 			Error: err,
 		})
 	}

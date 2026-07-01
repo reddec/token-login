@@ -328,10 +328,10 @@ type Token struct {
 	User string `json:"user"`
 	// Custom token description.
 	Label string `json:"label"`
-	// Allowed hosts. Supports globs. Empty means "allow all".
-	Host string `json:"host"`
-	// Allowed path. Supports globs. Empty means "allow all".
-	Path string `json:"path"`
+	// Allowed hosts. Supports globs. Empty list means "allow all".
+	Hosts []string `json:"hosts"`
+	// Allowed paths. Supports globs. Empty list means "allow all".
+	Paths []string `json:"paths"`
 	// ID of the project this token belongs to.
 	ProjectId int `json:"projectId"`
 	// Slug of the project this token belongs to.
@@ -377,14 +377,14 @@ func (s *Token) GetLabel() string {
 	return s.Label
 }
 
-// GetHost returns the value of Host.
-func (s *Token) GetHost() string {
-	return s.Host
+// GetHosts returns the value of Hosts.
+func (s *Token) GetHosts() []string {
+	return s.Hosts
 }
 
-// GetPath returns the value of Path.
-func (s *Token) GetPath() string {
-	return s.Path
+// GetPaths returns the value of Paths.
+func (s *Token) GetPaths() []string {
+	return s.Paths
 }
 
 // GetProjectId returns the value of ProjectId.
@@ -442,14 +442,14 @@ func (s *Token) SetLabel(val string) {
 	s.Label = val
 }
 
-// SetHost sets the value of Host.
-func (s *Token) SetHost(val string) {
-	s.Host = val
+// SetHosts sets the value of Hosts.
+func (s *Token) SetHosts(val []string) {
+	s.Hosts = val
 }
 
-// SetPath sets the value of Path.
-func (s *Token) SetPath(val string) {
-	s.Path = val
+// SetPaths sets the value of Paths.
+func (s *Token) SetPaths(val []string) {
+	s.Paths = val
 }
 
 // SetProjectId sets the value of ProjectId.
@@ -476,10 +476,10 @@ func (s *Token) SetRequests(val int64) {
 type TokenConfig struct {
 	// Custom token description.
 	Label OptString `json:"label"`
-	// Allowed hosts. Supports globs. Empty means "allow all".
-	Host OptString `json:"host"`
-	// Allowed path. Supports globs. Empty means "allow all".
-	Path OptString `json:"path"`
+	// Allowed hosts. Supports globs. Empty list means "allow all".
+	Hosts []string `json:"hosts"`
+	// Allowed paths. Supports globs. Empty list means "allow all".
+	Paths []string `json:"paths"`
 	// Custom headers which will be added after successfull authorization.
 	Headers []NameValue `json:"headers"`
 	// Project ID this token belongs to.
@@ -491,14 +491,14 @@ func (s *TokenConfig) GetLabel() OptString {
 	return s.Label
 }
 
-// GetHost returns the value of Host.
-func (s *TokenConfig) GetHost() OptString {
-	return s.Host
+// GetHosts returns the value of Hosts.
+func (s *TokenConfig) GetHosts() []string {
+	return s.Hosts
 }
 
-// GetPath returns the value of Path.
-func (s *TokenConfig) GetPath() OptString {
-	return s.Path
+// GetPaths returns the value of Paths.
+func (s *TokenConfig) GetPaths() []string {
+	return s.Paths
 }
 
 // GetHeaders returns the value of Headers.
@@ -516,14 +516,14 @@ func (s *TokenConfig) SetLabel(val OptString) {
 	s.Label = val
 }
 
-// SetHost sets the value of Host.
-func (s *TokenConfig) SetHost(val OptString) {
-	s.Host = val
+// SetHosts sets the value of Hosts.
+func (s *TokenConfig) SetHosts(val []string) {
+	s.Hosts = val
 }
 
-// SetPath sets the value of Path.
-func (s *TokenConfig) SetPath(val OptString) {
-	s.Path = val
+// SetPaths sets the value of Paths.
+func (s *TokenConfig) SetPaths(val []string) {
+	s.Paths = val
 }
 
 // SetHeaders sets the value of Headers.
@@ -540,10 +540,10 @@ func (s *TokenConfig) SetProjectId(val int) {
 type TokenPatch struct {
 	// Custom token description.
 	Label OptString `json:"label"`
-	// Allowed hosts. Supports globs. Empty means "allow all".
-	Host OptString `json:"host"`
-	// Allowed path. Supports globs. Empty means "allow all".
-	Path OptString `json:"path"`
+	// Allowed hosts. Supports globs. Empty list means "allow all".
+	Hosts []string `json:"hosts"`
+	// Allowed paths. Supports globs. Empty list means "allow all".
+	Paths []string `json:"paths"`
 	// Custom headers which will be added after successfull authorization.
 	Headers []NameValue `json:"headers"`
 }
@@ -553,14 +553,14 @@ func (s *TokenPatch) GetLabel() OptString {
 	return s.Label
 }
 
-// GetHost returns the value of Host.
-func (s *TokenPatch) GetHost() OptString {
-	return s.Host
+// GetHosts returns the value of Hosts.
+func (s *TokenPatch) GetHosts() []string {
+	return s.Hosts
 }
 
-// GetPath returns the value of Path.
-func (s *TokenPatch) GetPath() OptString {
-	return s.Path
+// GetPaths returns the value of Paths.
+func (s *TokenPatch) GetPaths() []string {
+	return s.Paths
 }
 
 // GetHeaders returns the value of Headers.
@@ -573,14 +573,14 @@ func (s *TokenPatch) SetLabel(val OptString) {
 	s.Label = val
 }
 
-// SetHost sets the value of Host.
-func (s *TokenPatch) SetHost(val OptString) {
-	s.Host = val
+// SetHosts sets the value of Hosts.
+func (s *TokenPatch) SetHosts(val []string) {
+	s.Hosts = val
 }
 
-// SetPath sets the value of Path.
-func (s *TokenPatch) SetPath(val OptString) {
-	s.Path = val
+// SetPaths sets the value of Paths.
+func (s *TokenPatch) SetPaths(val []string) {
+	s.Paths = val
 }
 
 // SetHeaders sets the value of Headers.

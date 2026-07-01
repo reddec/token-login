@@ -74,10 +74,10 @@ const SKELETON_ROWS = 5
               <Badge v-else variant="outline" class="text-xs">none</Badge>
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
-              {{ token.host || 'Any' }}
+              {{ token.hosts?.join(', ') || 'Any' }}
             </TableCell>
             <TableCell class="text-sm text-muted-foreground">
-              {{ token.path || 'Any' }}
+              {{ token.paths?.join(', ') || 'Any' }}
             </TableCell>
             <TableCell class="text-right text-sm text-muted-foreground">
               {{ token.requests.toLocaleString() }}

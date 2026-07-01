@@ -36,8 +36,8 @@ function formatDate(iso: string): string {
               </Badge>
             </a>
             <Badge v-else variant="outline" class="text-xs">no project</Badge>
-            <span>{{ token.host || 'Any host' }}</span>
-            <span>{{ token.path || 'Any path' }}</span>
+            <span>{{ token.hosts?.join(', ') || 'Any host' }}</span>
+            <span>{{ token.paths?.join(', ') || 'Any path' }}</span>
           </div>
           <div class="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{{ token.requests.toLocaleString() }} requests</span>

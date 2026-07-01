@@ -48,7 +48,7 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 	}
 
 	headers := parseHeaders(req.Headers)
-	_, err = types.NewAccessKey(key.Hash(), req.Host.Value, req.Path.Value)
+	_, err = types.NewAccessKey(key.Hash(), req.Hosts, req.Paths)
 	if err != nil {
 		return nil, fmt.Errorf("validate key: %w", err)
 	}
@@ -70,11 +70,11 @@ func (srv *Server) CreateToken(ctx context.Context, req *api.TokenConfig) (*api.
 		User:      user,
 		Hash:      key.Hash(),
 		KeyID:     &kid,
+		ProjectID: int64(req.ProjectId),
 		Label:     req.Label.Value,
 		Headers:   headers,
-		Host:      req.Host.Value,
-		Path:      req.Path.Value,
-		ProjectID: int64(req.ProjectId),
+		Hosts:     req.Hosts,
+		Paths:     req.Paths,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create token: %w", err)
@@ -147,11 +147,11 @@ func (srv *Server) UpdateToken(ctx context.Context, req *api.TokenPatch, params 
 		User: utils.GetUser(ctx),
 		ID:   int64(params.Token),
 	}
-	if req.Host.Set {
-		p.Host = &req.Host.Value
+	if req.Hosts != nil {
+		p.Hosts = &req.Hosts
 	}
-	if req.Path.Set {
-		p.Path = &req.Path.Value
+	if req.Paths != nil {
+		p.Paths = &req.Paths
 	}
 	if req.Label.Set {
 		p.Label = &req.Label.Value
@@ -274,8 +274,8 @@ func mapToken(t *dbo.Token) *api.Token {
 		KeyID:       t.KeyID.String(),
 		User:        t.User,
 		Label:       t.Label,
-		Host:        t.Host,
-		Path:        t.Path,
+		Hosts:       t.Hosts,
+		Paths:       t.Paths,
 		Headers:     mapHeaders(t.Headers),
 		Requests:    t.Requests,
 		ProjectId:   int(t.ProjectID),

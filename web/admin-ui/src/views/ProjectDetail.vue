@@ -60,8 +60,8 @@ const createTokenOpen = ref(false)
 const creatingToken = ref(false)
 const newTokenConfig = reactive<TokenConfig>({
   label: '',
-  host: '',
-  path: '',
+  hosts: [],
+  paths: [],
   headers: [],
   projectId: 0,
 })
@@ -144,8 +144,8 @@ function openCreateTokenDialog() {
     separator: '-',
     length: 2,
   })
-  newTokenConfig.host = ''
-  newTokenConfig.path = ''
+  newTokenConfig.hosts = []
+  newTokenConfig.paths = []
   newTokenConfig.headers = []
   newTokenConfig.projectId = Number(props.id)
   createTokenOpen.value = true

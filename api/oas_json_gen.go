@@ -689,12 +689,20 @@ func (s *Token) encodeFields(e *jx.Encoder) {
 		e.Str(s.Label)
 	}
 	{
-		e.FieldStart("host")
-		e.Str(s.Host)
+		e.FieldStart("hosts")
+		e.ArrStart()
+		for _, elem := range s.Hosts {
+			e.Str(elem)
+		}
+		e.ArrEnd()
 	}
 	{
-		e.FieldStart("path")
-		e.Str(s.Path)
+		e.FieldStart("paths")
+		e.ArrStart()
+		for _, elem := range s.Paths {
+			e.Str(elem)
+		}
+		e.ArrEnd()
 	}
 	{
 		e.FieldStart("projectId")
@@ -728,8 +736,8 @@ var jsonFieldsNameOfToken = [13]string{
 	4:  "keyID",
 	5:  "user",
 	6:  "label",
-	7:  "host",
-	8:  "path",
+	7:  "hosts",
+	8:  "paths",
 	9:  "projectId",
 	10: "projectSlug",
 	11: "headers",
@@ -827,29 +835,45 @@ func (s *Token) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"label\"")
 			}
-		case "host":
+		case "hosts":
 			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
-				v, err := d.Str()
-				s.Host = string(v)
-				if err != nil {
+				s.Hosts = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Hosts = append(s.Hosts, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"host\"")
+				return errors.Wrap(err, "decode field \"hosts\"")
 			}
-		case "path":
+		case "paths":
 			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
-				v, err := d.Str()
-				s.Path = string(v)
-				if err != nil {
+				s.Paths = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Paths = append(s.Paths, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"path\"")
+				return errors.Wrap(err, "decode field \"paths\"")
 			}
 		case "projectId":
 			requiredBitSet[1] |= 1 << 1
@@ -977,15 +1001,23 @@ func (s *TokenConfig) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Host.Set {
-			e.FieldStart("host")
-			s.Host.Encode(e)
+		if s.Hosts != nil {
+			e.FieldStart("hosts")
+			e.ArrStart()
+			for _, elem := range s.Hosts {
+				e.Str(elem)
+			}
+			e.ArrEnd()
 		}
 	}
 	{
-		if s.Path.Set {
-			e.FieldStart("path")
-			s.Path.Encode(e)
+		if s.Paths != nil {
+			e.FieldStart("paths")
+			e.ArrStart()
+			for _, elem := range s.Paths {
+				e.Str(elem)
+			}
+			e.ArrEnd()
 		}
 	}
 	{
@@ -1006,8 +1038,8 @@ func (s *TokenConfig) encodeFields(e *jx.Encoder) {
 
 var jsonFieldsNameOfTokenConfig = [5]string{
 	0: "label",
-	1: "host",
-	2: "path",
+	1: "hosts",
+	2: "paths",
 	3: "headers",
 	4: "projectId",
 }
@@ -1031,25 +1063,43 @@ func (s *TokenConfig) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"label\"")
 			}
-		case "host":
+		case "hosts":
 			if err := func() error {
-				s.Host.Reset()
-				if err := s.Host.Decode(d); err != nil {
+				s.Hosts = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Hosts = append(s.Hosts, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"host\"")
+				return errors.Wrap(err, "decode field \"hosts\"")
 			}
-		case "path":
+		case "paths":
 			if err := func() error {
-				s.Path.Reset()
-				if err := s.Path.Decode(d); err != nil {
+				s.Paths = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Paths = append(s.Paths, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"path\"")
+				return errors.Wrap(err, "decode field \"paths\"")
 			}
 		case "headers":
 			if err := func() error {
@@ -1152,15 +1202,23 @@ func (s *TokenPatch) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Host.Set {
-			e.FieldStart("host")
-			s.Host.Encode(e)
+		if s.Hosts != nil {
+			e.FieldStart("hosts")
+			e.ArrStart()
+			for _, elem := range s.Hosts {
+				e.Str(elem)
+			}
+			e.ArrEnd()
 		}
 	}
 	{
-		if s.Path.Set {
-			e.FieldStart("path")
-			s.Path.Encode(e)
+		if s.Paths != nil {
+			e.FieldStart("paths")
+			e.ArrStart()
+			for _, elem := range s.Paths {
+				e.Str(elem)
+			}
+			e.ArrEnd()
 		}
 	}
 	{
@@ -1177,8 +1235,8 @@ func (s *TokenPatch) encodeFields(e *jx.Encoder) {
 
 var jsonFieldsNameOfTokenPatch = [4]string{
 	0: "label",
-	1: "host",
-	2: "path",
+	1: "hosts",
+	2: "paths",
 	3: "headers",
 }
 
@@ -1200,25 +1258,43 @@ func (s *TokenPatch) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"label\"")
 			}
-		case "host":
+		case "hosts":
 			if err := func() error {
-				s.Host.Reset()
-				if err := s.Host.Decode(d); err != nil {
+				s.Hosts = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Hosts = append(s.Hosts, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"host\"")
+				return errors.Wrap(err, "decode field \"hosts\"")
 			}
-		case "path":
+		case "paths":
 			if err := func() error {
-				s.Path.Reset()
-				if err := s.Path.Decode(d); err != nil {
+				s.Paths = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Paths = append(s.Paths, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"path\"")
+				return errors.Wrap(err, "decode field \"paths\"")
 			}
 		case "headers":
 			if err := func() error {

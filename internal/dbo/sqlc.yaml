@@ -29,6 +29,18 @@ sql:
             go_type:
               import: "github.com/reddec/token-login/internal/types"
               type: "Headers"
+          - column: "token.hosts"
+            go_type:
+              type: "string"
+          - column: "token.paths"
+            go_type:
+              type: "string"
+          - column: "token_view.hosts"
+            go_type:
+              type: "string"
+          - column: "token_view.paths"
+            go_type:
+              type: "string"
 
   - engine: "postgresql"
     queries: "postgres/queries/"
@@ -61,3 +73,19 @@ sql:
             go_type:
               import: "github.com/reddec/token-login/internal/types"
               type: "KeyID"
+          - column: "token.hosts"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"
+          - column: "token.paths"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"
+          - column: "token_view.hosts"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"
+          - column: "token_view.paths"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"

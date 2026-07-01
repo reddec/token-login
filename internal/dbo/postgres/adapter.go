@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/reddec/token-login/internal/dbo"
@@ -24,13 +26,21 @@ func (s *store) Close() error {
 }
 
 func (s *store) CreateToken(ctx context.Context, p dbo.CreateTokenParams) (*dbo.Token, error) {
+	hostsJSON, err := json.Marshal(p.Hosts)
+	if err != nil {
+		return nil, fmt.Errorf("marshal hosts: %w", err)
+	}
+	pathsJSON, err := json.Marshal(p.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("marshal paths: %w", err)
+	}
 	id, err := s.q.CreateToken(ctx, CreateTokenParams{
 		KeyID:     *p.KeyID,
 		Hash:      p.Hash,
 		User:      p.User,
 		Label:     p.Label,
-		Path:      p.Path,
-		Host:      p.Host,
+		Paths:     pathsJSON,
+		Hosts:     hostsJSON,
 		Headers:   p.Headers,
 		ProjectID: p.ProjectID,
 	})
@@ -45,7 +55,7 @@ func (s *store) GetToken(ctx context.Context, user string, id int64) (*dbo.Token
 	if err != nil {
 		return nil, fmt.Errorf("get token: %w", err)
 	}
-	return mapToken(row), nil
+	return mapToken(row)
 }
 
 func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) {
@@ -53,7 +63,7 @@ func (s *store) GetTokenByID(ctx context.Context, id int64) (*dbo.Token, error) 
 	if err != nil {
 		return nil, fmt.Errorf("get token by id: %w", err)
 	}
-	return mapToken(row), nil
+	return mapToken(row)
 }
 
 func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([]*dbo.Token, error) {
@@ -67,7 +77,12 @@ func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([
 		}
 		out := make([]*dbo.Token, 0, len(rows))
 		for _, r := range rows {
-			out = append(out, mapToken(r))
+			tok, err := mapToken(r)
+			if err != nil {
+				slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+				continue
+			}
+			out = append(out, tok)
 		}
 		return out, nil
 	}
@@ -77,7 +92,12 @@ func (s *store) ListTokens(ctx context.Context, user string, projectID int64) ([
 	}
 	out := make([]*dbo.Token, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, mapToken(r))
+		tok, err := mapToken(r)
+		if err != nil {
+			slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+			continue
+		}
+		out = append(out, tok)
 	}
 	return out, nil
 }
@@ -87,15 +107,20 @@ func (s *store) UpdateToken(ctx context.Context, p dbo.UpdateTokenParams) (int64
 	if err != nil {
 		return 0, fmt.Errorf("get token for update: %w", err)
 	}
-	host := current.Host
-	path := current.Path
+	var hosts, paths []string
+	if err := json.Unmarshal(current.Hosts, &hosts); err != nil {
+		return 0, fmt.Errorf("unmarshal hosts for token %d: %w", p.ID, err)
+	}
+	if err := json.Unmarshal(current.Paths, &paths); err != nil {
+		return 0, fmt.Errorf("unmarshal paths for token %d: %w", p.ID, err)
+	}
 	label := current.Label
 	headers := current.Headers
-	if p.Host != nil {
-		host = *p.Host
+	if p.Hosts != nil {
+		hosts = *p.Hosts
 	}
-	if p.Path != nil {
-		path = *p.Path
+	if p.Paths != nil {
+		paths = *p.Paths
 	}
 	if p.Label != nil {
 		label = *p.Label
@@ -103,9 +128,17 @@ func (s *store) UpdateToken(ctx context.Context, p dbo.UpdateTokenParams) (int64
 	if p.Headers != nil {
 		headers = *p.Headers
 	}
+	hostsJSON, merr := json.Marshal(hosts)
+	if merr != nil {
+		return 0, fmt.Errorf("marshal hosts for token %d: %w", p.ID, merr)
+	}
+	pathsJSON, merr := json.Marshal(paths)
+	if merr != nil {
+		return 0, fmt.Errorf("marshal paths for token %d: %w", p.ID, merr)
+	}
 	return s.q.UpdateToken(ctx, UpdateTokenParams{
-		Host:    host,
-		Path:    path,
+		Hosts:   hostsJSON,
+		Paths:   pathsJSON,
 		Label:   label,
 		Headers: headers,
 		User:    p.User,
@@ -197,7 +230,12 @@ func (s *store) ListAllTokens(ctx context.Context) ([]*dbo.Token, error) {
 	}
 	out := make([]*dbo.Token, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, mapToken(r))
+		tok, err := mapToken(r)
+		if err != nil {
+			slog.Warn("skipping corrupt token in list", "id", r.ID, "error", err)
+			continue
+		}
+		out = append(out, tok)
 	}
 	return out, nil
 }
@@ -240,12 +278,19 @@ func (s *store) UpdateStats(ctx context.Context, stats map[int64]dbo.StatsEntry)
 	return nil
 }
 
-func mapToken(row TokenView) *dbo.Token {
+func mapToken(row TokenView) (*dbo.Token, error) {
+	var hosts, paths []string
+	if err := json.Unmarshal(row.Hosts, &hosts); err != nil {
+		return nil, fmt.Errorf("unmarshal hosts for token %d: %w", row.ID, err)
+	}
+	if err := json.Unmarshal(row.Paths, &paths); err != nil {
+		return nil, fmt.Errorf("unmarshal paths for token %d: %w", row.ID, err)
+	}
 	return &dbo.Token{
 		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		KeyID: &row.KeyID, Hash: row.Hash, User: row.User, Label: row.Label,
-		Path: row.Path, Host: row.Host, Headers: row.Headers,
+		Paths: paths, Hosts: hosts, Headers: row.Headers,
 		ProjectID: row.ProjectID, ProjectSlug: row.ProjectSlug,
 		Requests: row.Requests, LastAccessAt: row.LastAccessAt,
-	}
+	}, nil
 }

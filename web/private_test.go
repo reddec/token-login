@@ -22,15 +22,23 @@ func setupToken(t *testing.T, host, path string, headers types.Headers, projectS
 	key, err := types.NewKey()
 	require.NoError(t, err)
 
-	ak, err := types.NewAccessKey(key.Hash(), host, path)
+	hosts := []string{host}
+	if host == "" {
+		hosts = nil
+	}
+	paths := []string{path}
+	if path == "" {
+		paths = nil
+	}
+	ak, err := types.NewAccessKey(key.Hash(), hosts, paths)
 	require.NoError(t, err)
 
 	dbToken := &dbo.Token{
 		ID:          1,
 		User:        "testuser",
 		KeyID:       func() *types.KeyID { k := key.ID(); return &k }(),
-		Host:        host,
-		Path:        path,
+		Hosts:       hosts,
+		Paths:       paths,
 		Headers:     headers,
 		ProjectSlug: projectSlug,
 	}

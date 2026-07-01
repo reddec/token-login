@@ -27,12 +27,12 @@ type Token struct {
 	Hash         []byte        `json:"hash"`
 	User         string        `json:"user"`
 	Label        string        `json:"label"`
-	Path         string        `json:"path"`
-	Host         string        `json:"host"`
 	Headers      types.Headers `json:"headers"`
 	Requests     int64         `json:"requests"`
 	LastAccessAt time.Time     `json:"last_access_at"`
 	ProjectID    int64         `json:"project_id"`
+	Hosts        string        `json:"hosts"`
+	Paths        string        `json:"paths"`
 }
 
 type TokenView struct {
@@ -43,8 +43,8 @@ type TokenView struct {
 	Hash         []byte        `json:"hash"`
 	User         string        `json:"user"`
 	Label        string        `json:"label"`
-	Path         string        `json:"path"`
-	Host         string        `json:"host"`
+	Hosts        string        `json:"hosts"`
+	Paths        string        `json:"paths"`
 	Headers      types.Headers `json:"headers"`
 	Requests     int64         `json:"requests"`
 	LastAccessAt time.Time     `json:"last_access_at"`

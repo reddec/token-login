@@ -67,13 +67,13 @@ export type TokenPatch = {
      */
     label?: string;
     /**
-     * Allowed hosts. Supports globs. Empty means "allow all"
+     * Allowed hosts. Supports globs. Empty list means "allow all"
      */
-    host?: string;
+    hosts?: Array<string>;
     /**
-     * Allowed path. Supports globs. Empty means "allow all"
+     * Allowed paths. Supports globs. Empty list means "allow all"
      */
-    path?: string;
+    paths?: Array<string>;
     /**
      * Custom headers which will be added after successfull authorization
      */
@@ -86,13 +86,13 @@ export type TokenConfig = {
      */
     label?: string;
     /**
-     * Allowed hosts. Supports globs. Empty means "allow all"
+     * Allowed hosts. Supports globs. Empty list means "allow all"
      */
-    host?: string;
+    hosts?: Array<string>;
     /**
-     * Allowed path. Supports globs. Empty means "allow all"
+     * Allowed paths. Supports globs. Empty list means "allow all"
      */
-    path?: string;
+    paths?: Array<string>;
     /**
      * Custom headers which will be added after successfull authorization
      */
@@ -133,13 +133,13 @@ export type Token = {
      */
     label: string;
     /**
-     * Allowed hosts. Supports globs. Empty means "allow all"
+     * Allowed hosts. Supports globs. Empty list means "allow all"
      */
-    host: string;
+    hosts: Array<string>;
     /**
-     * Allowed path. Supports globs. Empty means "allow all"
+     * Allowed paths. Supports globs. Empty list means "allow all"
      */
-    path: string;
+    paths: Array<string>;
     /**
      * ID of the project this token belongs to
      */

@@ -13,7 +13,7 @@ import (
 )
 
 const createToken = `-- name: CreateToken :one
-INSERT INTO token (key_id, hash, user, label, path, host, headers, project_id)
+INSERT INTO token (key_id, hash, user, label, paths, hosts, headers, project_id)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id
 `
@@ -23,8 +23,8 @@ type CreateTokenParams struct {
 	Hash      []byte        `json:"hash"`
 	User      string        `json:"user"`
 	Label     string        `json:"label"`
-	Path      string        `json:"path"`
-	Host      string        `json:"host"`
+	Paths     string        `json:"paths"`
+	Hosts     string        `json:"hosts"`
 	Headers   types.Headers `json:"headers"`
 	ProjectID int64         `json:"project_id"`
 }
@@ -35,8 +35,8 @@ func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (int64
 		arg.Hash,
 		arg.User,
 		arg.Label,
-		arg.Path,
-		arg.Host,
+		arg.Paths,
+		arg.Hosts,
 		arg.Headers,
 		arg.ProjectID,
 	)
@@ -63,7 +63,7 @@ func (q *Queries) DeleteToken(ctx context.Context, arg DeleteTokenParams) (int64
 }
 
 const getToken = `-- name: GetToken :one
-SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? AND id = ?
+SELECT id, created_at, updated_at, key_id, hash, user, label, hosts, paths, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? AND id = ?
 `
 
 type GetTokenParams struct {
@@ -82,8 +82,8 @@ func (q *Queries) GetToken(ctx context.Context, arg GetTokenParams) (TokenView, 
 		&i.Hash,
 		&i.User,
 		&i.Label,
-		&i.Path,
-		&i.Host,
+		&i.Hosts,
+		&i.Paths,
 		&i.Headers,
 		&i.Requests,
 		&i.LastAccessAt,
@@ -94,7 +94,7 @@ func (q *Queries) GetToken(ctx context.Context, arg GetTokenParams) (TokenView, 
 }
 
 const getTokenByID = `-- name: GetTokenByID :one
-SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE id = ?
+SELECT id, created_at, updated_at, key_id, hash, user, label, hosts, paths, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE id = ?
 `
 
 func (q *Queries) GetTokenByID(ctx context.Context, id int64) (TokenView, error) {
@@ -108,8 +108,8 @@ func (q *Queries) GetTokenByID(ctx context.Context, id int64) (TokenView, error)
 		&i.Hash,
 		&i.User,
 		&i.Label,
-		&i.Path,
-		&i.Host,
+		&i.Hosts,
+		&i.Paths,
 		&i.Headers,
 		&i.Requests,
 		&i.LastAccessAt,
@@ -120,7 +120,7 @@ func (q *Queries) GetTokenByID(ctx context.Context, id int64) (TokenView, error)
 }
 
 const listAllTokens = `-- name: ListAllTokens :many
-SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id, project_slug FROM token_view
+SELECT id, created_at, updated_at, key_id, hash, user, label, hosts, paths, headers, requests, last_access_at, project_id, project_slug FROM token_view
 `
 
 func (q *Queries) ListAllTokens(ctx context.Context) ([]TokenView, error) {
@@ -140,8 +140,8 @@ func (q *Queries) ListAllTokens(ctx context.Context) ([]TokenView, error) {
 			&i.Hash,
 			&i.User,
 			&i.Label,
-			&i.Path,
-			&i.Host,
+			&i.Hosts,
+			&i.Paths,
 			&i.Headers,
 			&i.Requests,
 			&i.LastAccessAt,
@@ -189,7 +189,7 @@ func (q *Queries) ListTokenIDsByProject(ctx context.Context, projectID int64) ([
 }
 
 const listTokens = `-- name: ListTokens :many
-SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? ORDER BY id DESC
+SELECT id, created_at, updated_at, key_id, hash, user, label, hosts, paths, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? ORDER BY id DESC
 `
 
 func (q *Queries) ListTokens(ctx context.Context, user string) ([]TokenView, error) {
@@ -209,8 +209,8 @@ func (q *Queries) ListTokens(ctx context.Context, user string) ([]TokenView, err
 			&i.Hash,
 			&i.User,
 			&i.Label,
-			&i.Path,
-			&i.Host,
+			&i.Hosts,
+			&i.Paths,
 			&i.Headers,
 			&i.Requests,
 			&i.LastAccessAt,
@@ -231,7 +231,7 @@ func (q *Queries) ListTokens(ctx context.Context, user string) ([]TokenView, err
 }
 
 const listTokensByUserAndProject = `-- name: ListTokensByUserAndProject :many
-SELECT id, created_at, updated_at, key_id, hash, user, label, path, host, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? AND project_id = ? ORDER BY id DESC
+SELECT id, created_at, updated_at, key_id, hash, user, label, hosts, paths, headers, requests, last_access_at, project_id, project_slug FROM token_view WHERE user = ? AND project_id = ? ORDER BY id DESC
 `
 
 type ListTokensByUserAndProjectParams struct {
@@ -256,8 +256,8 @@ func (q *Queries) ListTokensByUserAndProject(ctx context.Context, arg ListTokens
 			&i.Hash,
 			&i.User,
 			&i.Label,
-			&i.Path,
-			&i.Host,
+			&i.Hosts,
+			&i.Paths,
 			&i.Headers,
 			&i.Requests,
 			&i.LastAccessAt,
@@ -305,13 +305,13 @@ func (q *Queries) RefreshToken(ctx context.Context, arg RefreshTokenParams) (int
 
 const updateToken = `-- name: UpdateToken :execrows
 UPDATE token
-SET host = ?, path = ?, label = ?, headers = ?, updated_at = current_timestamp
+SET hosts = ?, paths = ?, label = ?, headers = ?, updated_at = current_timestamp
 WHERE user = ? AND id = ?
 `
 
 type UpdateTokenParams struct {
-	Host    string        `json:"host"`
-	Path    string        `json:"path"`
+	Hosts   string        `json:"hosts"`
+	Paths   string        `json:"paths"`
 	Label   string        `json:"label"`
 	Headers types.Headers `json:"headers"`
 	User    string        `json:"user"`
@@ -320,8 +320,8 @@ type UpdateTokenParams struct {
 
 func (q *Queries) UpdateToken(ctx context.Context, arg UpdateTokenParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateToken,
-		arg.Host,
-		arg.Path,
+		arg.Hosts,
+		arg.Paths,
 		arg.Label,
 		arg.Headers,
 		arg.User,

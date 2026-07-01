@@ -52,8 +52,8 @@ func TestNew(t *testing.T) {
 
 	secret1, err := srv.CreateToken(aliceCtx, &api.TokenConfig{
 		Label:     api.NewOptString("l1"),
-		Host:      api.NewOptString("*.example.com"),
-		Path:      api.NewOptString("/**"),
+		Hosts:     []string{"*.example.com"},
+		Paths:     []string{"/**"},
 		ProjectId: aliceDefault,
 		Headers: []api.NameValue{
 			{Name: "foo", Value: "bar"},
@@ -67,8 +67,8 @@ func TestNew(t *testing.T) {
 
 	secret2, err := srv.CreateToken(aliceCtx, &api.TokenConfig{
 		Label:     api.NewOptString("l2"),
-		Host:      api.NewOptString("someparts"),
-		Path:      api.NewOptString("/**"),
+		Hosts:     []string{"someparts"},
+		Paths:     []string{"/**"},
 		ProjectId: aliceDefault,
 		Headers: []api.NameValue{
 			{Name: "foo", Value: "bar"},
@@ -95,8 +95,8 @@ func TestNew(t *testing.T) {
 		require.Len(t, aliceTokens, 2)
 		require.Equal(t, "l1", aliceTokens[1].Label)
 		require.Equal(t, "l2", aliceTokens[0].Label)
-		assert.Equal(t, "*.example.com", aliceTokens[1].Host)
-		assert.Equal(t, "/**", aliceTokens[0].Path)
+		assert.Equal(t, []string{"*.example.com"}, aliceTokens[1].Hosts)
+		assert.Equal(t, []string{"/**"}, aliceTokens[0].Paths)
 		require.Len(t, aliceTokens[0].Headers, 2)
 		assert.Equal(t, "foo", aliceTokens[0].Headers[0].Name)
 		assert.Equal(t, "bar", aliceTokens[0].Headers[0].Value)
@@ -149,15 +149,15 @@ func TestNew(t *testing.T) {
 
 	t.Run("update token host and path", func(t *testing.T) {
 		err := srv.UpdateToken(aliceCtx, &api.TokenPatch{
-			Host: api.NewOptString("new.example.com"),
-			Path: api.NewOptString("/api/**"),
+			Hosts: []string{"new.example.com"},
+			Paths: []string{"/api/**"},
 		}, api.UpdateTokenParams{Token: secret1.ID})
 		require.NoError(t, err)
 
 		tok, err := srv.GetToken(aliceCtx, api.GetTokenParams{Token: secret1.ID})
 		require.NoError(t, err)
-		assert.Equal(t, "new.example.com", tok.Host)
-		assert.Equal(t, "/api/**", tok.Path)
+		assert.Equal(t, []string{"new.example.com"}, tok.Hosts)
+		assert.Equal(t, []string{"/api/**"}, tok.Paths)
 	})
 
 	t.Run("update token headers", func(t *testing.T) {

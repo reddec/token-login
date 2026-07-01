@@ -253,16 +253,20 @@ components:
           type: string
           description: Custom token description
           maxLength: 127
-        host:
-          type: string
-          description: Allowed hosts. Supports globs. Empty means "allow all"
-          example: "*.example.com"
-          maxLength: 255
-        path:
-          type: string
-          description: Allowed path. Supports globs. Empty means "allow all"
-          example: "/**"
-          maxLength: 2048
+        hosts:
+          type: array
+          items:
+            type: string
+            maxLength: 255
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+            maxLength: 2048
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
         headers:
           type: array
           maxItems: 20
@@ -277,16 +281,20 @@ components:
           type: string
           description: Custom token description
           maxLength: 127
-        host:
-          type: string
-          description: Allowed hosts. Supports globs. Empty means "allow all"
-          example: "*.example.com"
-          maxLength: 255
-        path:
-          type: string
-          description: Allowed path. Supports globs. Empty means "allow all"
-          example: "/**"
-          maxLength: 2048
+        hosts:
+          type: array
+          items:
+            type: string
+            maxLength: 255
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+            maxLength: 2048
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
         headers:
           type: array
           maxItems: 20
@@ -326,14 +334,18 @@ components:
         label:
           type: string
           description: Custom token description
-        host:
-          type: string
-          description: Allowed hosts. Supports globs. Empty means "allow all"
-          example: "*.example.com"
-        path:
-          type: string
-          description: Allowed path. Supports globs. Empty means "allow all"
-          example: "/**"
+        hosts:
+          type: array
+          items:
+            type: string
+          description: Allowed hosts. Supports globs. Empty list means "allow all"
+          example: ["*.example.com", "**.org"]
+        paths:
+          type: array
+          items:
+            type: string
+          description: Allowed paths. Supports globs. Empty list means "allow all"
+          example: ["/api/**", "/admin/**"]
         projectId:
           type: integer
           description: ID of the project this token belongs to
@@ -356,8 +368,8 @@ components:
         - keyID
         - user
         - label
-        - host
-        - path
+        - hosts
+        - paths
         - projectId
         - projectSlug
         - requests

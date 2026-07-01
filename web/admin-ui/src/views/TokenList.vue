@@ -45,8 +45,8 @@ const creating = ref(false)
 
 const newConfig = reactive<TokenConfig>({
   label: '',
-  host: '',
-  path: '',
+  hosts: [],
+  paths: [],
   headers: [],
   projectId: 0,
 })
@@ -76,8 +76,8 @@ const filtered = computed(() => {
     (t) =>
       t.label.toLowerCase().includes(q) ||
       t.keyID.toLowerCase().includes(q) ||
-      t.host.toLowerCase().includes(q) ||
-      t.path.toLowerCase().includes(q) ||
+      t.hosts?.some(h => h.toLowerCase().includes(q)) ||
+      t.paths?.some(p => p.toLowerCase().includes(q)) ||
       t.projectSlug?.toLowerCase().includes(q),
   )
 })
@@ -88,8 +88,8 @@ function openCreateDialog() {
     separator: '-',
     length: 2,
   })
-  newConfig.host = ''
-  newConfig.path = ''
+  newConfig.hosts = []
+  newConfig.paths = []
   newConfig.headers = []
   newConfig.projectId = projects.value[0]?.id ?? 0
   createDialogOpen.value = true

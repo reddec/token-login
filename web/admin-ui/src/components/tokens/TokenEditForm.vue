@@ -16,8 +16,8 @@ import type { Token, Project, NameValue } from '@/api'
 
 interface FormConfig {
   label: string
-  host: string
-  path: string
+  hosts: string[]
+  paths: string[]
   projectId: number | undefined
   headers: NameValue[]
 }
@@ -61,7 +61,7 @@ function syncHeaders() {
     .map((h) => ({ name: h.name, value: h.value }))
 }
 
-function update(key: keyof FormConfig, value: string | number | undefined) {
+function update(key: keyof FormConfig, value: string | number | string[] | undefined) {
   ;(props.config as any)[key] = value
   emit('update:config', { ...props.config })
 }
@@ -86,30 +86,30 @@ function update(key: keyof FormConfig, value: string | number | undefined) {
     <!-- Host restriction -->
     <div class="space-y-2">
       <Label for="token-host">Host restriction</Label>
-      <Input
+      <textarea
         id="token-host"
-        :model-value="config.host"
-        placeholder="* (allow all)"
-        @update:model-value="update('host', $event)"
-      />
+        class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        :value="config.hosts.join('\n')"
+        placeholder="One glob per line. Leave empty to allow all."
+        @input="update('hosts', ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(s => s !== ''))"
+      ></textarea>
       <p class="text-xs text-muted-foreground">
-        Glob patterns supported (<code>*.example.com</code>, <code>**.com</code>). Empty means allow
-        all hosts.
+        Glob patterns supported (<code>*.example.com</code>, <code>**.com</code>). One per line. Empty means allow all hosts.
       </p>
     </div>
 
     <!-- Path restriction -->
     <div class="space-y-2">
       <Label for="token-path">Path restriction</Label>
-      <Input
+      <textarea
         id="token-path"
-        :model-value="config.path"
-        placeholder="* (allow all)"
-        @update:model-value="update('path', $event)"
-      />
+        class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        :value="config.paths.join('\n')"
+        placeholder="One glob per line. Leave empty to allow all."
+        @input="update('paths', ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(s => s !== ''))"
+      ></textarea>
       <p class="text-xs text-muted-foreground">
-        Glob patterns supported (<code>/api/**</code>, <code>/foo/*</code>). Empty means allow all
-        paths.
+        Glob patterns supported (<code>/api/**</code>, <code>/foo/*</code>). One per line. Empty means allow all paths.
       </p>
     </div>
 

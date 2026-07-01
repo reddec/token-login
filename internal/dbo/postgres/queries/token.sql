@@ -14,13 +14,13 @@ SELECT * FROM token_view WHERE "user" = $1 AND project_id = $2 ORDER BY id DESC;
 SELECT * FROM token_view;
 
 -- name: CreateToken :one
-INSERT INTO token (key_id, hash, "user", label, path, host, headers, project_id)
+INSERT INTO token (key_id, hash, "user", label, paths, hosts, headers, project_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;
 
 -- name: UpdateToken :execrows
 UPDATE token
-SET host = $1, path = $2, label = $3, headers = $4, updated_at = now()
+SET hosts = $1, paths = $2, label = $3, headers = $4, updated_at = now()
 WHERE "user" = $5 AND id = $6;
 
 -- name: RefreshToken :execrows

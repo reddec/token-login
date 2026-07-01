@@ -123,8 +123,8 @@ func (rt Key) Hash() []byte {
 	return s[:]
 }
 
-func (rt Key) AccessKey(host, path string) (*AccessKey, error) {
-	return NewAccessKey(rt.Hash(), host, path)
+func (rt Key) AccessKey(hosts, paths []string) (*AccessKey, error) {
+	return NewAccessKey(rt.Hash(), hosts, paths)
 }
 
 type KeyID [KeyIDSize]byte

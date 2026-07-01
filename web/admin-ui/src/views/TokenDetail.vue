@@ -44,15 +44,15 @@ const showDeleteDialog = ref(false)
 
 const config = reactive<TokenPatch>({
   label: '',
-  host: '',
-  path: '',
+  hosts: [],
+  paths: [],
   headers: [],
 })
 
 function initFromToken(t: Token) {
   config.label = t.label
-  config.host = t.host
-  config.path = t.path
+  config.hosts = t.hosts ?? []
+  config.paths = t.paths ?? []
   config.headers = t.headers ? [...t.headers] : []
 }
 

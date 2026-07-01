@@ -263,18 +263,21 @@ func verifyAfterMigration(t *testing.T, store dbo.Store, version string) {
 	t.Helper()
 	ctx := context.Background()
 	all, err := store.ListAllTokens(ctx)
+	if err != nil {
+		t.Logf("ListAllTokens error: %v (type=%T, string=%q)", err, err, err.Error())
+	}
 	require.NoError(t, err)
 	require.Len(t, all, 3, "all tokens should survive migration")
 	byLabel := mapTokens(all)
 	tk, ok := byLabel["minimal"]
 	require.True(t, ok)
 	assert.Equal(t, "admin", tk.User)
-	assert.Equal(t, "/**", tk.Path)
+	assert.Equal(t, []string{"/**"}, tk.Paths)
 	assert.NotZero(t, tk.ProjectID)
 	tk, ok = byLabel["with path & headers"]
 	require.True(t, ok)
 	assert.Equal(t, "admin", tk.User)
-	assert.Equal(t, "/api/**", tk.Path)
+	assert.Equal(t, []string{"/api/**"}, tk.Paths)
 	assert.Len(t, tk.Headers, 2)
 	tk, ok = byLabel["bob's token"]
 	require.True(t, ok)

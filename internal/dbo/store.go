@@ -21,8 +21,8 @@ type Token struct {
 	Hash         []byte        `json:"-"`
 	User         string        `json:"user"`
 	Label        string        `json:"label"`
-	Path         string        `json:"path"`
-	Host         string        `json:"host"`
+	Paths        []string      `json:"paths"`
+	Hosts        []string      `json:"hosts"`
 	Headers      types.Headers `json:"headers,omitempty"`
 	ProjectID    int64         `json:"project_id"`
 	ProjectSlug  string        `json:"project_slug,omitempty"`
@@ -52,8 +52,8 @@ type CreateTokenParams struct {
 	Hash      []byte
 	KeyID     *types.KeyID
 	Label     string
-	Host      string
-	Path      string
+	Hosts     []string
+	Paths     []string
 	Headers   types.Headers
 	ProjectID int64
 }
@@ -62,8 +62,8 @@ type CreateTokenParams struct {
 type UpdateTokenParams struct {
 	User    string
 	ID      int64
-	Host    *string
-	Path    *string
+	Hosts   *[]string
+	Paths   *[]string
 	Label   *string
 	Headers *types.Headers
 }
