@@ -587,10 +587,11 @@ make snapshot
 - **Database:** minimum upgrade version is v1.0.0; MySQL support dropped (SQLite + PostgreSQL only)
 - **Database:** SQLite uses cgo-free pure-Go driver (modernc.org/sqlite)
 - **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
-- **Admin UI:** logo used as SVG favicon with ICO fallback
 - **OIDC:** new `--oidc.scopes` / `OIDC_SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid profile email`)
 - **OIDC:** new `--oidc.session-ttl` / `OIDC_SESSION_TTL` flag — session lifetime (default: `168h`)
 - **OIDC:** new `--oidc.trust-proxy` / `OIDC_TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
+- OIDC: session encryption enabled, proactive token refresh at half TTL
+- Minimum Go version: 1.26
 
 ## 1.2.0
 
