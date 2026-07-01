@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache-dependency-path: 'web/admin-ui/package-lock.json'
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Build frontend
@@ -83,7 +83,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           cache-dependency-path: 'web/admin-ui/package-lock.json'
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install GoReleaser
