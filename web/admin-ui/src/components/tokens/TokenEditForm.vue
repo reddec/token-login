@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,52 @@ const emit = defineEmits<{
 }>()
 
 const customHeaders = reactive<{ name: string; value: string }[]>([])
+
+// Local string refs for textareas — preserve raw input including trailing newlines.
+// The parent config stores string[]; these refs hold the joined view.
+const hostsText = ref(props.config.hosts.join('\n'))
+const pathsText = ref(props.config.paths.join('\n'))
+
+// Sync parent config → local text (initial load, external changes)
+watch(
+  () => props.config.hosts,
+  (val) => {
+    const text = val.join('\n')
+    if (text !== hostsText.value) hostsText.value = text
+  },
+)
+watch(
+  () => props.config.paths,
+  (val) => {
+    const text = val.join('\n')
+    if (text !== pathsText.value) pathsText.value = text
+  },
+)
+
+function deriveArray(text: string): string[] {
+  return text
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s !== '')
+}
+
+function onHostsInput(e: Event) {
+  const text = (e.target as HTMLTextAreaElement).value
+  hostsText.value = text
+  const arr = deriveArray(text)
+  if (arr.join('\n') !== props.config.hosts.join('\n')) {
+    update('hosts', arr)
+  }
+}
+
+function onPathsInput(e: Event) {
+  const text = (e.target as HTMLTextAreaElement).value
+  pathsText.value = text
+  const arr = deriveArray(text)
+  if (arr.join('\n') !== props.config.paths.join('\n')) {
+    update('paths', arr)
+  }
+}
 
 // Sync custom headers from config on changes
 watch(
@@ -89,9 +135,9 @@ function update(key: keyof FormConfig, value: string | number | string[] | undef
       <textarea
         id="token-host"
         class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        :value="config.hosts.join('\n')"
+        :value="hostsText"
         placeholder="One glob per line. Leave empty to allow all."
-        @input="update('hosts', ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(s => s !== ''))"
+        @input="onHostsInput"
       ></textarea>
       <p class="text-xs text-muted-foreground">
         Glob patterns supported (<code>*.example.com</code>, <code>**.com</code>). One per line. Empty means allow all hosts.
@@ -104,9 +150,9 @@ function update(key: keyof FormConfig, value: string | number | string[] | undef
       <textarea
         id="token-path"
         class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        :value="config.paths.join('\n')"
+        :value="pathsText"
         placeholder="One glob per line. Leave empty to allow all."
-        @input="update('paths', ($event.target as HTMLTextAreaElement).value.split('\n').map(s => s.trim()).filter(s => s !== ''))"
+        @input="onPathsInput"
       ></textarea>
       <p class="text-xs text-muted-foreground">
         Glob patterns supported (<code>/api/**</code>, <code>/foo/*</code>). One per line. Empty means allow all paths.
