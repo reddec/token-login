@@ -174,6 +174,9 @@ OIDC login config:
       --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
       --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
       --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+      --oidc.scopes=               Additional OAuth scopes (default: openid profile email) [$OIDC_SCOPES]
+      --oidc.session-ttl=          Session TTL (default: 168h) [$OIDC_SESSION_TTL]
+      --oidc.trust-proxy           Trust X-Forwarded-* headers for redirect URL detection [$OIDC_TRUST_PROXY]
 
 OIDC Redis session configuration:
       --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
@@ -274,7 +277,7 @@ For example, to increase Auth server graceful shutdown to 1 minute:
 Token-login supports **SQLite** (cgo-free, pure Go) and **PostgreSQL**. MySQL support has been dropped.
 
 Database migrations are handled automatically on startup via versioned SQL migrations. The minimum version required
-for upgrade is **v1.2.0** — earlier versions must be upgraded to v1.2.0 first.
+for upgrade is **v1.0.0** — earlier versions cannot be migrated directly.
 
 Specify the database type by including the corresponding scheme in the URL:
 - `sqlite://` for SQLite (default)
@@ -390,6 +393,9 @@ OIDC login config:
       --oidc.session=[local|redis] Session storage (default: local) [$OIDC_SESSION]
       --oidc.server-url=           (optional) public server URL for redirects [$OIDC_SERVER_URL]
       --oidc.emails=               Allowed emails (enabled if at least one set) [$OIDC_EMAILS]
+      --oidc.scopes=               Additional OAuth scopes (default: openid profile email) [$OIDC_SCOPES]
+      --oidc.session-ttl=          Session TTL (default: 168h) [$OIDC_SESSION_TTL]
+      --oidc.trust-proxy           Trust X-Forwarded-* headers for redirect URL detection [$OIDC_TRUST_PROXY]
 
 OIDC Redis session configuration:
       --oidc.redis.url=            Redis URL (default: redis://redis) [$OIDC_REDIS_URL]
@@ -501,7 +507,7 @@ must be hashed via bcrypt2.
 
 A token consists of two distinct parts. The first part comprises 8 bytes of randomly generated data, which are securely
 generated and placed at the beginning of the token. The second part comprises 32 bytes of randomly generated data that
-have been hashed using the SHA-384 algorithm. The raw value of private part is known only during the token generation
+have been hashed using the SHA3-384 algorithm. The raw value of private part is known only during the token generation
 process and is stored irreversibly hashed in both the database and cache. The public part of the token, known as the "
 key hint" or "key id," functions as a unique identifier (think about it as username) that is used to locate the
 corresponding private key in the database. The key ID is system-wide unique; the uniqueness is checked during the token
@@ -511,7 +517,7 @@ User token representation is token encoded in Base32 without padding. Case-**ins
 
 ### Security
 
-The tokens are irreversibly hashed using SHA-384 for security reasons. Although SHA-384 is not a key derivation
+The tokens are irreversibly hashed using SHA3-384 for security reasons. Although SHA3-384 is not a key derivation
 function (KDF), it provides a secure hash of the original token, which is generated from a crypto-secure pure-random
 32-byte source with around 2^256 entropy. This makes it practically impossible to brute force the token within a
 reasonable time frame, without requiring the use of a KDF, which is typically used for key-space limited sources such as
@@ -577,12 +583,12 @@ make snapshot
 
 - **Projects:** tokens are now scoped to projects — organize tokens by project, manage them from the project detail page
 - **Database:** migrated from Ent ORM to sqlc + sql-migrate — versioned SQL migrations replace auto-migration
-- **Database:** minimum upgrade version is v1.2.0; MySQL support dropped (SQLite + PostgreSQL only)
+- **Database:** minimum upgrade version is v1.0.0; MySQL support dropped (SQLite + PostgreSQL only)
 - **Database:** SQLite uses cgo-free pure-Go driver (modernc.org/sqlite)
 - **Admin UI:** rewritten in Vue 3 + shadcn-vue with projects as the landing page
-- **OIDC:** new `--scopes` / `SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid`)
-- **OIDC:** new `--session-ttl` / `SESSION_TTL` flag — session lifetime (default: `168h`)
-- **OIDC:** new `--trust-proxy` / `TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
+- **OIDC:** new `--oidc.scopes` / `OIDC_SCOPES` flag — additional OAuth scopes (comma-separated, default: `openid profile email`)
+- **OIDC:** new `--oidc.session-ttl` / `OIDC_SESSION_TTL` flag — session lifetime (default: `168h`)
+- **OIDC:** new `--oidc.trust-proxy` / `OIDC_TRUST_PROXY` flag — trust `X-Forwarded-*` headers for redirect URL detection
 - OIDC: session encryption enabled, proactive token refresh at half TTL
 - Minimum Go version: 1.26
 
