@@ -102,7 +102,6 @@ type Store interface {
 	UpdateProject(ctx context.Context, p UpdateProjectParams) (int64, error)
 	DeleteProject(ctx context.Context, user string, id int64) ([]int64, error)
 	ProjectExists(ctx context.Context, user string, id int64) (bool, error)
-	EnsureDefaultProject(ctx context.Context, user string) (*Project, error)
 
 	// Cache operations — unfiltered, returns all rows.
 	ListAllTokens(ctx context.Context) ([]*Token, error)

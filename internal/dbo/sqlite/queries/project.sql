@@ -22,10 +22,3 @@ DELETE FROM project WHERE "user" = ? AND id = ?;
 -- name: ProjectExists :one
 SELECT EXISTS(SELECT 1 FROM project WHERE "user" = ? AND id = ?) AS ok;
 
--- name: GetDefaultProject :one
-SELECT * FROM project WHERE "user" = ? AND slug = '';
-
--- name: CreateDefaultProject :one
-INSERT INTO project ("user", slug, description)
-VALUES (?, '', 'Default project')
-RETURNING *;

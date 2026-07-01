@@ -9,26 +9,6 @@ import (
 	"context"
 )
 
-const createDefaultProject = `-- name: CreateDefaultProject :one
-INSERT INTO project ("user", slug, description)
-VALUES (?, '', 'Default project')
-RETURNING id, created_at, updated_at, user, slug, description
-`
-
-func (q *Queries) CreateDefaultProject(ctx context.Context, user string) (Project, error) {
-	row := q.db.QueryRowContext(ctx, createDefaultProject, user)
-	var i Project
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.User,
-		&i.Slug,
-		&i.Description,
-	)
-	return i, err
-}
-
 const createProject = `-- name: CreateProject :one
 INSERT INTO project ("user", slug, description)
 VALUES (?, ?, ?)
@@ -70,24 +50,6 @@ func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) (i
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const getDefaultProject = `-- name: GetDefaultProject :one
-SELECT id, created_at, updated_at, user, slug, description FROM project WHERE "user" = ? AND slug = ''
-`
-
-func (q *Queries) GetDefaultProject(ctx context.Context, user string) (Project, error) {
-	row := q.db.QueryRowContext(ctx, getDefaultProject, user)
-	var i Project
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.User,
-		&i.Slug,
-		&i.Description,
-	)
-	return i, err
 }
 
 const getProject = `-- name: GetProject :one

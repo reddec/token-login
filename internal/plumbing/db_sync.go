@@ -9,22 +9,24 @@ import (
 	"github.com/reddec/token-login/web"
 )
 
-// SyncStats synchronizes hits (stats) to database.
 func SyncStats(ctx context.Context, store dbo.Store, statsCh <-chan web.Hit, aggregate time.Duration) {
 	ticker := time.NewTicker(aggregate)
 	defer ticker.Stop()
 
-	var done bool
-
 	stats := make(map[int64]dbo.StatsEntry)
-	for !done {
+	for {
 		select {
 		case <-ctx.Done():
 			return
 		case hit, ok := <-statsCh:
 			if !ok {
-				done = true
-				break
+				// Channel closed: flush any remaining stats.
+				if len(stats) > 0 {
+					if err := store.UpdateStats(ctx, stats); err != nil {
+						slog.Error("failed dump stats to database", "error", err)
+					}
+				}
+				return
 			}
 			old := stats[hit.ID]
 			if hit.Time.After(old.Last) {
@@ -33,16 +35,14 @@ func SyncStats(ctx context.Context, store dbo.Store, statsCh <-chan web.Hit, agg
 			old.Hits++
 			stats[hit.ID] = old
 		case <-ticker.C:
-		}
-
-		if len(stats) == 0 {
-			slog.Debug("no stats to sync")
-			continue
-		}
-		if err := store.UpdateStats(ctx, stats); err != nil {
-			slog.Error("failed dump stats to database", "error", err)
-		} else {
-			stats = make(map[int64]dbo.StatsEntry)
+			if len(stats) == 0 {
+				continue
+			}
+			if err := store.UpdateStats(ctx, stats); err != nil {
+				slog.Error("failed dump stats to database", "error", err)
+			} else {
+				stats = make(map[int64]dbo.StatsEntry)
+			}
 		}
 	}
 }

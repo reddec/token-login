@@ -52,7 +52,7 @@ type Config struct {
 	Basic Basic     `group:"Basic login config" namespace:"basic" env-namespace:"BASIC"`
 	Proxy ProxyAuth `group:"Proxy login config" namespace:"proxy" env-namespace:"PROXY"`
 	DB    struct {
-		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite?cache=shared&_fk=1&_pragma=foreign_keys(1)"`
+		URL          string        `long:"url" env:"URL" description:"Database URL" default:"sqlite://data.sqlite"`
 		MaxConn      int           `long:"max-conn" env:"MAX_CONN" description:"Maximum number of opened connections to database" default:"10"`
 		IdleConn     int           `long:"idle-conn" env:"IDLE_CONN" description:"Maximum number of idle connections to database" default:"1"`
 		IdleTimeout  time.Duration `long:"idle-timeout" env:"IDLE_TIMEOUT" description:"Maximum amount of time a connection may be idle" default:"0"`

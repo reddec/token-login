@@ -190,24 +190,6 @@ func (s *store) ProjectExists(ctx context.Context, user string, id int64) (bool,
 	return s.q.ProjectExists(ctx, ProjectExistsParams{User: user, ID: id})
 }
 
-func (s *store) EnsureDefaultProject(ctx context.Context, user string) (*dbo.Project, error) {
-	row, err := s.q.GetDefaultProject(ctx, user)
-	if err == nil {
-		return &dbo.Project{
-			ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-			User: row.User, Slug: row.Slug, Description: row.Description,
-		}, nil
-	}
-	row2, err := s.q.CreateDefaultProject(ctx, user)
-	if err != nil {
-		return nil, fmt.Errorf("create default project: %w", err)
-	}
-	return &dbo.Project{
-		ID: row2.ID, CreatedAt: row2.CreatedAt, UpdatedAt: row2.UpdatedAt,
-		User: row2.User, Slug: row2.Slug, Description: row2.Description,
-	}, nil
-}
-
 func (s *store) ListAllTokens(ctx context.Context) ([]*dbo.Token, error) {
 	rows, err := s.q.ListAllTokens(ctx)
 	if err != nil {
